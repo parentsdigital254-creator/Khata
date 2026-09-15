@@ -6,13 +6,11 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#0d3b66">
-    <title>আবু বক্কর সেলস এন্ড সার্ভিস - অনলাইন খাতা (Google Drive Sync)</title>
+    <title>আবু বক্কর সেলস এন্ড সার্ভিস - অফলাইন ও অনলাইন খাতা</title>
     <!-- SheetJS (xlsx) Library for Excel Backup & Restore -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <!-- html2pdf Library for PDF Download -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <!-- Google Identity Services Library -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }
         body { background-color: #e5e5e5; display: flex; flex-direction: column; min-height: 100vh; align-items: center; padding: 0; margin: 0; width: 100vw; overflow-x: hidden; font-size: 30px; }
@@ -20,15 +18,21 @@
         .auth-card { padding: 50px 37.5px; text-align: center; width: 100%; max-width: 875px; margin: 0 auto; }
         .auth-card h2 { color: #0d3b66; margin-bottom: 18.75px; font-size: 50px; }
         .auth-card p { color: #666; font-size: 27.5px; margin-bottom: 31.25px; }
+        .password-wrapper { position: relative; width: 100%; margin-bottom: 25px; }
+        .password-wrapper input { margin-bottom: 0; padding-right: 75px; }
+        .toggle-password { position: absolute; right: 18.75px; top: 50%; transform: translateY(-50%); cursor: pointer; font-size: 35px; user-select: none; }
         .auth-input { width: 100%; padding: 22.5px; font-size: 30px; border: 2px solid #ccc; border-radius: 10px; margin-bottom: 25px; }
         .btn-auth { width: 100%; background-color: #15803d; color: white; padding: 22.5px; border: none; border-radius: 10px; font-weight: bold; font-size: 32.5px; cursor: pointer; transition: opacity 0.2s; }
-        .btn-google { background-color: #4285f4; }
         .btn-auth:disabled { background-color: #9ca3af !important; cursor: not-allowed; }
+        .auth-link-text { margin-top: 25px; font-size: 27.5px; color: #333; display: flex; justify-content: center; align-items: center; gap: 18.75px; flex-wrap: wrap; }
+        .auth-link-btn { color: #1d4ed8; font-weight: bold; cursor: pointer; text-decoration: underline; }
+        .btn-delete-acc-link { display: block; width: 100%; margin-top: 25px; background-color: #dc2626; color: white; padding: 18.75px; border: none; border-radius: 10px; font-weight: bold; font-size: 27.5px; cursor: pointer; }
         
         .header { background-color: #0d3b66; color: #ffffff; padding: 25px 31.25px; display: flex; justify-content: space-between; align-items: center; width: 100%; }
         .header-title h1 { font-size: 40px; font-weight: bold; }
         .user-status { font-size: 23px; color: #10b981; margin-top: 10px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
         .net-status-badge { font-weight: bold; font-size: 20px; padding: 4px 10px; background: rgba(255,255,255,0.15); border-radius: 6px; }
+        .pending-sync-badge { background: #f59e0b; color: #ffffff; font-size: 18px; padding: 4px 10px; border-radius: 6px; font-weight: bold; display: none; }
         .btn-logout { background-color: #dc2626; color: white; border: none; padding: 7.5px 15px; border-radius: 7.5px; font-size: 22.5px; cursor: pointer; }
         
         .btn-header-calc { background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%); border: none; padding: 15px 22.5px; border-radius: 37.5px; font-size: 35px; cursor: pointer; box-shadow: 0 3.75px 10px rgba(0,0,0,0.2); transition: transform 0.1s; display: flex; align-items: center; justify-content: center; }
@@ -59,11 +63,19 @@
         
         .section-banner { background-color: #4c1d95; color: white; padding: 15px 25px; font-weight: bold; font-size: 32.5px; display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 15px; flex-wrap: wrap; }
         
+        /* Smart Customer Search Box Styling */
         .search-box-container { display: flex; align-items: center; background-color: #ffffff; border-radius: 10px; padding: 6px 15px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); flex: 1; max-width: 450px; min-width: 260px; border: 2.5px solid #fbbf24; }
         .search-icon { font-size: 26px; margin-right: 10px; color: #4c1d95; }
         .search-input { border: none; outline: none; width: 100%; font-size: 26px; font-weight: bold; color: #1e293b; background: transparent; caret-color: #4c1d95; }
         .search-input::placeholder { color: #94a3b8; font-size: 22px; font-weight: normal; }
         .search-clear-btn { cursor: pointer; font-size: 20px; margin-left: 8px; user-select: none; opacity: 0.7; }
+        .search-clear-btn:hover { opacity: 1; }
+
+        .month-selector-container { display: flex; align-items: center; gap: 12.5px; }
+        .month-select-dropdown { background-color: #fbbf24; color: #4c1d95; border: none; padding: 10px 15px; border-radius: 7.5px; font-size: 25px; font-weight: bold; cursor: pointer; outline: none; }
+        .month-stats-display { font-size: 25px; background: #ffffff; color: #333; padding: 7.5px 15px; border-radius: 7.5px; display: flex; gap: 12.5px; font-weight: bold; }
+        .month-stats-baki { color: #dc2626; font-weight: bold; }
+        .month-stats-joma { color: #16a34a; font-weight: bold; }
 
         .customer-scroll-container { flex: 1; min-height: 500px; max-height: calc(100vh - 350px); overflow-y: auto; width: 100%; }
         .history-scroll-container { max-height: calc(100vh - 437.5px); overflow-y: auto; width: 100%; }
@@ -82,6 +94,12 @@
         .active-customer-info small { font-size: 25px; display: block; margin-top: 5px; }
         .active-customer-baki { background-color: white; color: #1e3a8a; padding: 12.5px 22.5px; border-radius: 7.5px; font-weight: bold; font-size: 30px; }
         
+        /* Dynamic Circular Call Icon Styling */
+        .btn-call-icon { width: 65px; height: 65px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: transform 0.1s, background-color 0.3s; user-select: none; -webkit-user-select: none; touch-action: manipulation; flex-shrink: 0; }
+        .btn-call-icon:active { transform: scale(0.90); }
+        .btn-call-icon.has-phone { background-color: #16a34a; }
+        .btn-call-icon.no-phone { background-color: #dc2626; }
+
         .form-grid { padding: 18.75px; background-color: #f8f9fa; width: 100%; }
         .form-row { display: flex; gap: 12.5px; margin-bottom: 18.75px; }
         .form-group { flex: 1; }
@@ -99,46 +117,212 @@
         .history-table th { background-color: #f1f5f9; padding: 18.75px 15px; font-size: 30px; border-bottom: 2.5px solid #ddd; position: sticky; top: 0; z-index: 1; }
         .history-table td { padding: 18.75px 15px; text-align: center; font-size: 30px; border-bottom: 2.5px solid #eee; }
         .joma-text { color: #16a34a; font-weight: bold; font-size: 30px; }
+        .holdable { user-select: none; cursor: pointer; }
         
-        .app-footer { position: fixed; bottom: 0; left: 0; width: 100%; background-color: #0d3b66; color: #ffffff; font-size: 22.5px; padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; z-index: 999; }
+        .app-footer { position: fixed; bottom: 0; left: 0; width: 100%; background-color: #0d3b66; color: #ffffff; font-size: 22.5px; padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; z-index: 999; box-shadow: 0 -3.75px 10px rgba(0,0,0,0.2); }
 
         .custom-toast { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.4); display: flex; justify-content: center; align-items: center; z-index: 10000; cursor: pointer; }
         .custom-toast-content { background: #ffffff; color: #15803d; padding: 37.5px 43.75px; border-radius: 15px; font-size: 32.5px; font-weight: bold; box-shadow: 0 7.5px 25px rgba(0,0,0,0.25); text-align: center; border-top: 10px solid #15803d; max-width: 750px; pointer-events: auto; line-height: 1.5; }
+        .custom-toast.error .custom-toast-content { color: #dc2626; border-top-color: #dc2626; }
 
-        #loading-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.65); display: none; justify-content: center; align-items: center; z-index: 20000; color: white; font-size: 35px; flex-direction: column; }
-        .spinner { border: 8px solid #f3f3f3; border-top: 8px solid #38bdf8; border-radius: 50%; width: 70px; height: 70px; animation: spin 1s linear infinite; margin-bottom: 20px; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .delete-confirm-dialog { background: #ffffff; padding: 43.75px; border-radius: 15px; width: 90%; max-width: 625px; text-align: center; box-shadow: 0 7.5px 31.25px rgba(0,0,0,0.3); border-top: 10px solid #dc2626; pointer-events: auto; }
+        .delete-confirm-dialog p { font-size: 30px; font-weight: bold; color: #333; margin-bottom: 31.25px; line-height: 1.5; }
+        .delete-confirm-btns { display: flex; gap: 18.75px; justify-content: center; }
+        .btn-confirm-delete { background-color: #dc2626; color: white; border: none; padding: 15px 30px; border-radius: 7.5px; font-weight: bold; font-size: 27.5px; cursor: pointer; flex: 1; }
+        .btn-cancel-delete { background-color: #6b7280; color: white; border: none; padding: 15px 30px; border-radius: 7.5px; font-weight: bold; font-size: 27.5px; cursor: pointer; flex: 1; }
+
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 2000; display: none; justify-content: center; align-items: flex-end; }
+        .modal-sheet { width: 100%; max-width: 100%; background: #ffffff; border-top-left-radius: 30px; border-top-right-radius: 30px; max-height: 85vh; display: flex; flex-direction: column; transform: translateY(100%); transition: transform 0.3s ease-out; box-shadow: 0 -7.5px 25px rgba(0,0,0,0.2); }
+        .modal-overlay.active { display: flex; }
+        .modal-overlay.active .modal-sheet { transform: translateY(0); }
+        .modal-header { background: #4c1d95; color: white; padding: 25px 31.25px; border-top-left-radius: 30px; border-top-right-radius: 30px; display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 32.5px; }
+        .modal-close-btn { background: #dc2626; color: white; border: none; padding: 10px 20px; border-radius: 7.5px; cursor: pointer; font-size: 25px; }
+        .modal-body { padding: 18.75px; max-height: 750px; overflow-y: auto; width: 100%; }
+
+        /* Print Modal / Invoice View Styling */
+        .print-modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.6); z-index: 3000; display: none; justify-content: center; align-items: center; overflow-y: auto; padding: 20px; }
+        .print-modal-overlay.active { display: flex; }
+        .print-modal-content { background: #ffffff; width: 100%; max-width: 900px; border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); overflow: hidden; display: flex; flex-direction: column; max-height: 95vh; }
+        .print-modal-top-bar { background: #0d3b66; color: white; padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; }
+        .print-modal-top-bar h3 { font-size: 28px; font-weight: bold; }
+        .print-action-btns { display: flex; gap: 10px; }
+        .btn-modal-action { padding: 10px 20px; border-radius: 7px; border: none; font-size: 22px; font-weight: bold; cursor: pointer; color: white; }
+        .btn-action-print { background-color: #16a34a; }
+        .btn-action-download { background-color: #0284c7; }
+        .btn-action-close { background-color: #dc2626; }
+
+        .invoice-paper { padding: 25px 30px; background: #ffffff; color: #222; font-family: 'Segoe UI', Arial, sans-serif; position: relative; box-sizing: border-box; width: 100%; }
+        .invoice-header-box { text-align: center; border-bottom: 3px solid #0d3b66; padding: 20px 15px; margin-bottom: 20px; background: linear-gradient(135deg, #f8fafc, #eff6ff); border-radius: 12px; }
+        .invoice-shop-name { font-size: 36px; font-weight: bold; color: #0d3b66; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.3; overflow: visible; word-wrap: break-word; word-break: break-word; }
+        .invoice-shop-address { font-size: 22px; color: #475569; margin-bottom: 5px; line-height: 1.3; }
+        .invoice-shop-mobile { font-size: 22px; color: #0284c7; font-weight: bold; line-height: 1.3; }
+        
+        .invoice-copy-badge { display: inline-block; background-color: #fbbf24; color: #78350f; padding: 6px 20px; border-radius: 20px; font-size: 22px; font-weight: bold; margin-bottom: 15px; text-transform: uppercase; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+
+        .invoice-meta-grid { display: flex; justify-content: space-between; background: #f1f5f9; padding: 18px 25px; border-radius: 10px; margin-bottom: 25px; font-size: 24px; }
+        .invoice-meta-left div { margin-bottom: 6px; }
+        .invoice-meta-right { text-align: right; }
+
+        .invoice-toggle-row { display: flex; gap: 15px; margin-bottom: 25px; justify-content: center; }
+        .btn-inv-toggle { padding: 12px 25px; border-radius: 8px; border: 2px solid #4c1d95; font-size: 24px; font-weight: bold; cursor: pointer; background: white; color: #4c1d95; transition: all 0.2s; }
+        .btn-inv-toggle.active { background: #4c1d95; color: white; box-shadow: 0 4px 12px rgba(76,29,149,0.3); }
+
+        .invoice-new-entry-box { background: #f8fafc; border: 2px dashed #0284c7; padding: 25px; border-radius: 12px; margin-bottom: 25px; }
+        .invoice-new-entry-box h4 { color: #0d3b66; font-size: 26px; margin-bottom: 15px; }
+        .inv-form-row { display: flex; gap: 12px; margin-bottom: 15px; }
+        .inv-form-group { flex: 1; }
+        .inv-form-group label { display: block; font-size: 20px; font-weight: bold; margin-bottom: 5px; color: #334155; }
+        .inv-form-group input { width: 100%; padding: 12px; border: 2px solid #cbd5e1; border-radius: 6px; font-size: 22px; }
+        .btn-inv-save-tx { background-color: #16a34a; color: white; border: none; padding: 12px 25px; border-radius: 6px; font-size: 22px; font-weight: bold; cursor: pointer; }
+
+        .invoice-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 24px; }
+        .invoice-table th { background-color: #0d3b66; color: white; padding: 15px; text-align: center; border: 1px solid #cbd5e1; }
+        .invoice-table td { padding: 15px; text-align: center; border: 1px solid #cbd5e1; color: #334155; }
+
+        .invoice-footer-section { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 40px; padding-top: 20px; border-top: 2px dashed #cbd5e1; }
+        .invoice-totals { font-size: 24px; font-weight: bold; color: #0d3b66; background: #f8fafc; padding: 15px 25px; border-radius: 10px; border: 1px solid #e2e8f0; }
+        .invoice-signature { text-align: center; font-size: 24px; font-weight: bold; color: #334155; border-top: 2px solid #334155; width: 250px; padding-top: 8px; margin-top: 50px; }
+
+        .calc-modal-sheet { background: linear-gradient(135deg, #2d3748, #1a202c); border-top-left-radius: 35px; border-top-right-radius: 35px; padding: 37.5px; width: 100%; max-width: 100%; box-shadow: 0 -10px 43.75px rgba(0,0,0,0.5); }
+        .calc-display { width: 100%; background-color: #0f172a; color: #38bdf8; text-align: right; font-size: 56.25px; font-weight: bold; padding: 31.25px; border-radius: 15px; border: 3.75px solid #3b82f6; margin-bottom: 31.25px; box-shadow: inset 0 3.75px 10px rgba(0,0,0,0.5); overflow-x: auto; word-wrap: break-word; }
+        .calc-buttons { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18.75px; margin-bottom: 31.25px; }
+        .calc-btn { padding: 30px; font-size: 37.5px; font-weight: bold; border: none; border-radius: 15px; cursor: pointer; transition: all 0.1s; box-shadow: 0 7.5px 12.5px rgba(0,0,0,0.3); }
+        .calc-btn:active { transform: translateY(3.75px); box-shadow: 0 3.75px 6.25px rgba(0,0,0,0.3); }
+        .calc-btn-num { background: #374151; color: #ffffff; }
+        .calc-btn-op { background: #f59e0b; color: #ffffff; }
+        .calc-btn-clear { background: #ef4444; color: #ffffff; }
+        .calc-btn-equal { background: #10b981; color: #ffffff; grid-column: span 2; }
+        .btn-calc-close-main { width: 100%; background: linear-gradient(90deg, #dc2626, #b91c1c); color: white; border: none; padding: 25px; border-radius: 12.5px; font-weight: bold; font-size: 30px; cursor: pointer; box-shadow: 0 7.5px 18.75px rgba(220,38,38,0.4); text-align: center; }
+        .countdown-text { font-size: 22.5px; color: #dc2626; margin-top: 10px; font-weight: bold; }
+
+        @media print {
+            body * { visibility: hidden; }
+            #printable-invoice-area, #printable-invoice-area * { visibility: visible; }
+            #printable-invoice-area { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 15px; }
+            .no-print { display: none !important; }
+        }
     </style>
 </head>
-<body>
-
-<div id="loading-overlay">
-    <div class="spinner"></div>
-    <div id="loading-text">গুগল ড্রাইভের সাথে ডাটা সিঙ্ক হচ্ছে...</div>
-</div>
+<body onclick="handleGlobalClick(event)">
 
 <div class="container">
-    <!-- Google Login View -->
+    <!-- Login View -->
     <div id="login-view" class="auth-card">
         <h2>দোকানের হিসাব খাতা</h2>
-        <p>আপনার নিজ জিমেইল অ্যাকাউন্টের ড্রাইভে ডাটা সুরক্ষিত রাখুন</p>
-        <button id="btn-login-google" class="btn-auth btn-google" onclick="handleAuth()">🔑 Google দিয়ে লগইন করুন</button>
-        <div style="margin-top: 25px; font-size: 24px; color: #666;" id="login-status-msg">
-            স্ট্যাটাস: লগইন করা নেই
+        <p>লগইন করতে আপনার তথ্য দিন</p>
+        <input type="email" id="login-email" class="auth-input" placeholder="জিমেইল আইডি">
+        <div class="password-wrapper">
+            <input type="password" id="login-pass" class="auth-input" placeholder="৮ সংখ্যার পাসওয়ার্ড" maxlength="8">
+            <span class="toggle-password" onclick="togglePasswordVisibility('login-pass', this)">👁️</span>
         </div>
+        <button id="btn-login" class="btn-auth" onclick="login()">লগইন করুন</button>
+        <div id="login-lock-timer" class="countdown-text" style="display:none;"></div>
+        <div class="auth-link-text">
+            <span>নতুন অ্যাকাউন্ট খুলবেন? <span class="auth-link-btn" onclick="showSignUp()">Sign Up</span></span>
+            <span style="color: #ccc;">|</span>
+            <span class="auth-link-btn" onclick="showResetPassword()" style="color: #d97706;">পাসওয়ার্ড রিসেট</span>
+        </div>
+        <button class="btn-delete-acc-link" onclick="showDeleteAccount()">একাউন্ট ডিলিট করুন</button>
+    </div>
+
+    <!-- Sign Up View -->
+    <div id="signup-view" class="auth-card" style="display: none;">
+        <h2>নতুন সাইন আপ</h2>
+        <p>সঠিক তথ্য দিয়ে প্রোফেশনাল রেজিস্ট্রেশন করুন</p>
+        <input type="text" id="signup-shop" class="auth-input" placeholder="দোকানের নাম (সর্বোচ্চ ৩৫ অক্ষর)" maxlength="35">
+        <input type="text" id="signup-mobile" class="auth-input" placeholder="মোবাইল নাম্বার">
+        <input type="text" id="signup-address" class="auth-input" placeholder="দোকানের ফুল অ্যাড্রেস">
+        <input type="email" id="signup-email" class="auth-input" placeholder="জিমেইল আইডি">
+        <div class="password-wrapper">
+            <input type="password" id="signup-pass" class="auth-input" placeholder="৮ সংখ্যার পাসওয়ার্ড" maxlength="8">
+            <span class="toggle-password" onclick="togglePasswordVisibility('signup-pass', this)">👁️</span>
+        </div>
+        <button class="btn-auth" id="btn-verify-trigger" onclick="sendOtp('signup')" style="background-color: #0d3b66;">ভেরিফিকেশন কোড পাঠান</button>
+        
+        <div id="otp-box" style="display: none; margin-top: 25px;">
+            <p style="color: #15803d; font-size: 25px; margin-bottom: 10px;">ইমেইলে প্রেরিত ৪ সংখ্যার কোডটি দিন:</p>
+            <input type="text" id="otp-input" class="auth-input" placeholder="৪ সংখ্যার কোড" maxlength="4">
+            <button class="btn-auth" id="btn-signup-verify" onclick="confirmSignUp()">সাইন আপ সম্পন্ন করুন</button>
+            <div id="signup-lock-timer" class="countdown-text" style="display:none;"></div>
+            <div style="margin-top: 15px;">
+                <span id="signup-resend-text" style="font-size: 25px; color: #555;">কোড পাননি? <span id="signup-resend-btn" class="auth-link-btn" onclick="resendOtp('signup')" style="color: #9ca3af; pointer-events: none;">পুনরায় পাঠান (<span id="signup-timer">60</span>s)</span></span>
+            </div>
+        </div>
+        <div class="auth-link-text">ইতিমধ্যে অ্যাকাউন্ট আছে? <span class="auth-link-btn" onclick="showLogin()">লগইন করুন</span></div>
+    </div>
+
+    <!-- Reset Password View -->
+    <div id="reset-view" class="auth-card" style="display: none;">
+        <h2>পাসওয়ার্ড রিসেট</h2>
+        <p>আপনার জিমেইল ভেরিফাই করুন</p>
+        <input type="email" id="reset-email" class="auth-input" placeholder="আপনার জিমেইল আইডি">
+        <button class="btn-auth" id="btn-reset-verify-trigger" onclick="sendOtp('reset')" style="background-color: #0d3b66;">কোড পাঠান</button>
+        
+        <div id="reset-step2-box" style="display: none; margin-top: 25px;">
+            <p style="color: #15803d; font-size: 25px; margin-bottom: 10px;">ইমেইলে প্রেরিত ৪ সংখ্যার কোডটি দিন:</p>
+            <input type="text" id="reset-otp-input" class="auth-input" placeholder="৪ সংখ্যার কোড" maxlength="4">
+            <button class="btn-auth" id="btn-verify-otp" onclick="verifyResetOtp()" style="background-color: #d97706; margin-bottom: 18.75px;">কোড ভেরিফাই করুন</button>
+            <div id="reset-lock-timer" class="countdown-text" style="display:none;"></div>
+            <div style="margin-bottom: 18.75px;">
+                <span style="font-size: 25px; color: #555;">কোড পাননি? <span id="reset-resend-btn" class="auth-link-btn" onclick="resendOtp('reset')" style="color: #9ca3af; pointer-events: none;">পুনরায় পাঠান (<span id="reset-timer">60</span>s)</span></span>
+            </div>
+
+            <div id="new-pass-box" style="display: none; border-top: 2.5px solid #ccc; padding-top: 25px;">
+                <p style="color: #0d3b66; font-size: 27.5px; font-weight: bold; margin-bottom: 15px;">নতুন পাসওয়ার্ড লিখুন:</p>
+                <div class="password-wrapper">
+                    <input type="password" id="reset-new-pass" class="auth-input" placeholder="নতুন ৮ সংখ্যার পাসওয়ার্ড" maxlength="8">
+                    <span class="toggle-password" onclick="togglePasswordVisibility('reset-new-pass', this)">👁️</span>
+                </div>
+                <div class="password-wrapper">
+                    <input type="password" id="reset-confirm-pass" class="auth-input" placeholder="কনফার্ম পাসওয়ার্ড" maxlength="8">
+                    <span class="toggle-password" onclick="togglePasswordVisibility('reset-confirm-pass', this)">👁️</span>
+                </div>
+                <button class="btn-auth" onclick="saveNewPassword()">পাসওয়ার্ড আপডেট করুন</button>
+            </div>
+        </div>
+        <div class="auth-link-text">লগইন পেজে ফিরে যাবেন? <span class="auth-link-btn" onclick="showLogin()">লগইন করুন</span></div>
+    </div>
+
+    <!-- Delete Account View -->
+    <div id="delete-view" class="auth-card" style="display: none;">
+        <h2 style="color: #dc2626;">একাউন্ট ডিলিট করুন</h2>
+        <p>অ্যাাকাউন্ট স্থায়ীভাবে মুছে ফেলতে তথ্য দিন</p>
+        <input type="email" id="delete-email" class="auth-input" placeholder="জিমেইল আইডি">
+        <div class="password-wrapper">
+            <input type="password" id="delete-pass" class="auth-input" placeholder="৮ সংখ্যার পাসওয়ার্ড" maxlength="8">
+            <span class="toggle-password" onclick="togglePasswordVisibility('delete-pass', this)">👁️</span>
+        </div>
+        <button class="btn-auth" id="btn-delete-verify-trigger" onclick="sendOtp('delete')" style="background-color: #0d3b66;">ভেরিফিকেশন কোড পাঠান</button>
+        
+        <div id="delete-otp-box" style="display: none; margin-top: 25px;">
+            <p style="color: #dc2626; font-size: 25px; margin-bottom: 10px;">ইমেইলে প্রেরিত ৪ সংখ্যার কোডটি দিন:</p>
+            <input type="text" id="delete-otp-input" class="auth-input" placeholder="৪ সংখ্যার কোড" maxlength="4">
+            <button class="btn-auth" id="btn-delete-verify-otp" onclick="confirmDeleteAccount()" style="background-color: #dc2626;">একাউন্ট মুছুন</button>
+            <div id="delete-lock-timer" class="countdown-text" style="display:none;"></div>
+            <div style="margin-top: 15px;">
+                <span style="font-size: 25px; color: #555;">কোড পাননি? <span id="delete-resend-btn" class="auth-link-btn" onclick="resendOtp('delete')" style="color: #9ca3af; pointer-events: none;">পুনরায় পাঠান (<span id="delete-timer">60</span>s)</span></span>
+            </div>
+        </div>
+        <div class="auth-link-text">লগইন পেজে ফিরে যাবেন? <span class="auth-link-btn" onclick="showLogin()">লগইন করুন</span></div>
     </div>
 
     <!-- App Dashboard View -->
     <div id="app-view" style="display: none;">
         <div class="header">
             <div class="header-title">
-                <h1 id="shop-title">আবু বক্কর সেলস এন্ড সার্ভিস</h1>
+                <h1 id="shop-title" class="holdable" 
+                    onmousedown="startHold(openShopEditModal, 3000)" onmouseup="cancelHold()" onmouseleave="cancelHold()"
+                    ontouchstart="startHold(openShopEditModal, 3000)" ontouchend="cancelHold()" ontouchcancel="cancelHold()">
+                    আবু বক্কর সেলস এন্ড সার্ভিস
+                </h1>
                 <div class="user-status">
                     <span id="user-email-display">--</span>
-                    <span id="network-status" class="net-status-badge">🟢 Google Drive Live</span>
+                    <span id="network-status" class="net-status-badge">🟢 অনলাইন</span>
+                    <span id="pending-sync-badge" class="pending-sync-badge"></span>
                     <button class="btn-logout" onclick="logout()">লগআউট</button>
                 </div>
             </div>
+            <button class="btn-header-calc" onclick="openCalculator()" title="ক্যালকুলেটর খুলুন">🧮</button>
             <div class="header-date">
                 <span><span class="header-date-badge">📅</span> তারিখ:</span>
                 <div class="header-date-value" id="current-date">--/--/----</div>
@@ -148,6 +332,11 @@
         <div id="lower-sections" style="display: none;">
             <div class="active-customer-card">
                 <div class="active-customer-left">
+                    <button id="active-cust-call-btn" class="btn-call-icon no-phone"
+                        onclick="handleCallBtnClick(event)"
+                        onmousedown="onCallBtnTouchStart(event)" onmouseup="onCallBtnTouchEnd(event)" onmouseleave="onCallBtnTouchEnd(event)"
+                        ontouchstart="onCallBtnTouchStart(event)" ontouchend="onCallBtnTouchEnd(event)" ontouchcancel="onCallBtnTouchEnd(event)">
+                    </button>
                     <div class="active-customer-info">
                         <strong id="active-name">কোনো কাস্টমার সিলেক্ট নেই</strong>
                         <small id="active-address">এড্রেস: -</small>
@@ -164,12 +353,14 @@
                     <div class="form-group"><label>জমা (৳)</label><input type="number" id="tx-joma" placeholder="0"></div>
                 </div>
                 <div class="tx-button-group">
-                    <button class="btn-save" id="btn-save-tx" onclick="addTransaction()">💾 ড্রাইভে সেভ করুন</button>
+                    <button class="btn-cancel-edit" id="btn-cancel-tx" onclick="cancelTxEdit(event)">Cancel</button>
+                    <button class="btn-save" id="btn-save-tx" onclick="handleTxButtonClick(event)">💾 সেভ করুন</button>
+                    <button class="btn-print-page" onclick="openPrintModal()">🖨️ প্রিন্ট করুন</button>
                 </div>
             </div>
             
             <div class="history-section">
-                <span>📜 কাস্টমার পেজ লেনদেন হিস্টোরি (Google Drive Tab)</span>
+                <span>📜 লেনদেন হিস্টোরি</span>
                 <button class="btn-open-modal" onclick="closeDetails()">👥 কাস্টমার তালিকা</button>
             </div>
             <div class="history-scroll-container">
@@ -188,29 +379,41 @@
                 </div>
                 <div class="add-customer-box">
                     <div class="add-customer-title-row">
-                        <div class="add-customer-title" id="cust-form-title">+ নতুন কাস্টমার (ড্রাইভে আলাদা পেজ তৈরি হবে)</div>
+                        <div class="add-customer-title" id="cust-form-title">+ নতুন কাস্টমার যোগ করুন</div>
+                        <button class="btn-backup-restore" onclick="openBackupRestoreModal()" title="ব্যাকআপ এবং রিস্টোর">Backup/Restore</button>
                     </div>
                     <div class="input-group">
                         <input type="text" id="cust-name" placeholder="নাম">
                         <input type="text" id="cust-address" placeholder="এড্রেস (ঠিকানা)">
                     </div>
                     <div class="cust-button-group">
-                        <button class="btn-add" id="btn-save-cust" onclick="addCustomer()">যোগ করুন</button>
+                        <button class="btn-cancel-cust" id="btn-cancel-cust" onclick="cancelCustEdit()">Cancel</button>
+                        <button class="btn-add" id="btn-save-cust" onclick="addCustomer()">যোগ</button>
                     </div>
                 </div>
             </div>
             
             <div class="section-banner">
+                <!-- Smart Customer Search Box -->
                 <div class="search-box-container">
                     <span class="search-icon">🔍</span>
-                    <input type="text" id="cust-search-input" class="search-input" placeholder="কাস্টমার খুঁজুন..." oninput="renderCustomerList()">
+                    <input type="text" id="cust-search-input" class="search-input" placeholder="কাস্টমার খুঁজুন (নাম/ঠিকানা)..." oninput="handleCustomerSearch()">
+                    <span class="search-clear-btn" id="search-clear-btn" onclick="clearCustomerSearch()" style="display:none;">❌</span>
+                </div>
+
+                <div class="month-selector-container">
+                    <select id="month-select" class="month-select-dropdown" onchange="handleMonthChange()"></select>
+                    <div class="month-stats-display">
+                        <span>বাকি: <span id="month-baki-val" class="month-stats-baki">৳0</span></span>
+                        <span>জমা: <span id="month-joma-val" class="month-stats-joma">৳0</span></span>
+                    </div>
                 </div>
             </div>
 
-            <div class="customer-scroll-container">
+            <div class="customer-scroll-container" id="cust-scroll-box">
                 <table>
                     <thead>
-                        <tr class="customer-table-header"><th>মুছুন</th><th>নাম</th><th>এড্রেস</th><th>বাকি</th><th>হিস্টোরি</th></tr>
+                        <tr class="customer-table-header"><th>মুছুন</th><th>নাম</th><th>এড্রেস</th><th>বাকি</th><th></th></tr>
                     </thead>
                     <tbody id="customer-list"></tbody>
                 </table>
@@ -224,386 +427,1666 @@
     <div>Developer by Md SAJU Ahmed</div>
 </div>
 
-<div id="custom-toast" class="custom-toast" style="display: none;" onclick="dismissToast()">
+<!-- Customer Phone Number Edit Modal -->
+<div id="phone-edit-modal" class="custom-toast" style="display: none;" onclick="event.stopPropagation()">
+    <div class="delete-confirm-dialog" style="border-top-color: #16a34a; max-width: 650px;">
+        <p style="color: #0d3b66; margin-bottom: 20px;">কাস্টমার মোবাইল নাম্বার যোগ / এডিট করুন</p>
+        <div style="text-align: left; margin-bottom: 20px;">
+            <label style="font-size: 24px; font-weight: bold; display: block; margin-bottom: 8px; color: #333;">মোবাইল নাম্বার:</label>
+            <input type="tel" id="edit-cust-phone-input" class="auth-input" style="font-size: 28px; padding: 15px; margin-bottom: 0;" placeholder="০১৭XXXXXXXX">
+        </div>
+        <div class="delete-confirm-btns">
+            <button class="btn-confirm-delete" style="background-color: #16a34a;" onclick="saveCustomerPhone()">সেভ</button>
+            <button class="btn-cancel-delete" style="background-color: #dc2626;" onclick="closePhoneEditModal()">ক্যানসেল</button>
+        </div>
+    </div>
+</div>
+
+<!-- Print & Customer Copy Modal -->
+<div id="print-modal" class="print-modal-overlay">
+    <div class="print-modal-content" onclick="event.stopPropagation()">
+        <div class="print-modal-top-bar">
+            <h3>কাস্টমার কপি - প্রিন্ট প্রিভিউ</h3>
+            <div class="print-action-btns">
+                <button class="btn-modal-action btn-action-print" onclick="handlePrintOrPdfClick('print')">🖨️ প্রিন্ট করুন</button>
+                <button class="btn-modal-action btn-action-download" onclick="handlePrintOrPdfClick('download')">📥 ডাউনলোড (PDF)</button>
+                <button class="btn-modal-action btn-action-close" onclick="closePrintModal()">canchel</button>
+            </div>
+        </div>
+        <div style="overflow-y: auto; max-height: calc(95vh - 70px); padding: 20px;">
+            <div id="printable-invoice-area" class="invoice-paper">
+                <div style="text-align: center;">
+                    <div class="invoice-copy-badge">কাস্টমার কপি</div>
+                </div>
+                <div class="invoice-header-box">
+                    <div class="invoice-shop-name" id="inv-shop-name">আবু বক্কর সেলস এন্ড সার্ভিস</div>
+                    <div class="invoice-shop-address" id="inv-shop-address">দোকানের ফুল অ্যাড্রেস</div>
+                    <div class="invoice-shop-mobile" id="inv-shop-mobile">মোবাইল নাম্বার: --</div>
+                </div>
+
+                <div class="invoice-meta-grid">
+                    <div class="invoice-meta-left">
+                        <div><strong>কাস্টমার নাম:</strong> <span id="inv-cust-name">-</span></div>
+                        <div><strong>অ্যাড্রেস:</strong> <span id="inv-cust-address">-</span></div>
+                    </div>
+                    <div class="invoice-meta-right">
+                        <div><strong>তারিখ:</strong> <span id="inv-date">-</span></div>
+                    </div>
+                </div>
+
+                <div class="invoice-toggle-row no-print">
+                    <button class="btn-inv-toggle active" id="btn-mode-full" onclick="setInvoiceMode('full')">Full History</button>
+                    <button class="btn-inv-toggle" id="btn-mode-new" onclick="setInvoiceMode('new')">New</button>
+                </div>
+
+                <div id="invoice-new-entry-container" class="invoice-new-entry-box no-print" style="display: none;">
+                    <h4>+ এন্ট্রি করুন</h4>
+                    <div class="inv-form-row">
+                        <div class="inv-form-group"><label>তারিখ</label><input type="text" id="inv-tx-date"></div>
+                        <div class="inv-form-group" style="flex: 2;"><label>বিবরণ</label><input type="text" id="inv-tx-desc" placeholder="বিবরণ লিখুন"></div>
+                    </div>
+                    <div class="inv-form-row">
+                        <div class="inv-form-group"><label>বিল (৳)</label><input type="number" id="inv-tx-bill" placeholder="0" oninput="calculateInvoiceNewLive()"></div>
+                        <div class="inv-form-group"><label>জমা (৳)</label><input type="number" id="inv-tx-joma" placeholder="0" oninput="calculateInvoiceNewLive()"></div>
+                        <div class="inv-form-group"><label>বাকি (৳)</label><input type="number" id="inv-tx-baki" placeholder="0" readonly style="background-color: #f1f5f9;"></div>
+                    </div>
+                    <button class="btn-inv-save-tx" onclick="saveInvoiceNewTransaction()">সেভ করুন</button>
+                </div>
+
+                <table class="invoice-table">
+                    <thead>
+                        <tr>
+                            <th>তারিখ</th>
+                            <th>বিবরণ</th>
+                            <th>বিল (৳)</th>
+                            <th>জমা (৳)</th>
+                            <th>বাকি (৳)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="invoice-table-body"></tbody>
+                </table>
+
+                <div class="invoice-footer-section">
+                    <div class="invoice-totals" id="invoice-totals-box">
+                        সর্বমোট বাকি: ৳ 0
+                    </div>
+                    <div>
+                        <div class="invoice-signature">Authorize Signature</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Save Confirmation Modal -->
+<div id="main-save-confirm-modal" class="custom-toast" style="display: none;" onclick="event.stopPropagation()">
+    <div class="delete-confirm-dialog" style="border-top-color: #0284c7;">
+        <p>আপনি কি এই লেনদেন মেইন হিস্টরিতে সেভ করতে চাচ্ছেন?</p>
+        <div class="delete-confirm-btns">
+            <button class="btn-confirm-delete" style="background-color: #16a34a;" onclick="confirmSaveToMain(true)">হ্যাঁ</button>
+            <button class="btn-cancel-delete" style="background-color: #dc2626;" onclick="confirmSaveToMain(false)">না</button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Notification -->
+<div id="custom-toast" class="custom-toast" style="display: none;" onclick="dismissToast(true)">
     <div class="custom-toast-content" id="toast-message">সফল বার্তা</div>
 </div>
 
+<!-- Shop Edit Modal -->
+<div id="shop-edit-modal" class="custom-toast" style="display: none;" onclick="event.stopPropagation()">
+    <div class="delete-confirm-dialog" style="border-top-color: #4c1d95; max-width: 700px;">
+        <p style="color: #4c1d95; margin-bottom: 20px;">দোকানের তথ্য এডিট করুন</p>
+        <div style="text-align: left; margin-bottom: 15px;">
+            <label style="font-size: 22px; font-weight: bold; display: block; margin-bottom: 5px;">দোকানের নাম:</label>
+            <input type="text" id="edit-shop-name" class="auth-input" style="font-size: 25px; padding: 15px; margin-bottom: 10px;" maxlength="35">
+            <label style="font-size: 22px; font-weight: bold; display: block; margin-bottom: 5px;">মোবাইল নাম্বার:</label>
+            <input type="text" id="edit-shop-mobile" class="auth-input" style="font-size: 25px; padding: 15px; margin-bottom: 10px;">
+            <label style="font-size: 22px; font-weight: bold; display: block; margin-bottom: 5px;">অ্যাড্রেস:</label>
+            <input type="text" id="edit-shop-address" class="auth-input" style="font-size: 25px; padding: 15px; margin-bottom: 10px;">
+        </div>
+        <div class="delete-confirm-btns">
+            <button class="btn-confirm-delete" style="background-color: #16a34a;" onclick="confirmUpdateShop()">update</button>
+            <button class="btn-cancel-delete" onclick="closeShopEditModal()">cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="delete-confirm-modal" class="custom-toast" style="display: none;" onclick="event.stopPropagation()">
+    <div class="delete-confirm-dialog">
+        <p>এই কাস্টমার ডিলিট করতে চাইলে ডিলিট বাটন চাপুন না চাইলে ক্যানচেল বাটন চাপুন</p>
+        <div class="delete-confirm-btns">
+            <button class="btn-confirm-delete" onclick="confirmDeleteCustomerAction()">ডিলিট</button>
+            <button class="btn-cancel-delete" onclick="closeDeleteConfirmModal()">ক্যানচেল</button>
+        </div>
+    </div>
+</div>
+
+<!-- Backup / Restore Modal -->
+<div id="backup-restore-modal" class="modal-overlay" onclick="closeBackupRestoreModal(event)">
+    <div class="modal-sheet" onclick="event.stopPropagation()" style="padding: 31.25px; align-items: stretch; border-radius: 30px 30px 0 0;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 31.25px;">
+            <h3 style="color: #4c1d95; font-size: 32.5px;">Excel Backup & Restore</h3>
+            <button class="modal-close-btn" onclick="closeBackupRestoreModal()">❌ বন্ধ করুন</button>
+        </div>
+        <div style="margin-bottom: 31.25px;">
+            <p style="font-size: 25px; color: #444; margin-bottom: 15px;">আপনার একাউন্টের সকল তথ্য রঙিন এক্সেল ফাইল হিসেবে ব্যাকআপ ডাউনলোড করুন:</p>
+            <button class="btn-auth" onclick="downloadExcelBackup()" style="background-color: #0284c7;">📥 এক্সেল ফাইল ডাউনলোড করুন (Backup)</button>
+        </div>
+        <div style="border-top: 2.5px solid #ddd; padding-top: 25px;">
+            <p style="font-size: 25px; color: #444; margin-bottom: 15px;">আগের ব্যাকআপ করা এক্সেল ফাইল থেকে ডাটা রিস্টোর করুন:</p>
+            <input type="file" id="excel-file-input" accept=".xlsx, .xls" class="auth-input" style="padding: 15px; margin-bottom: 15px;">
+            <button class="btn-auth" onclick="restoreExcelBackup()" style="background-color: #15803d;">📤 ডাটা রিস্টোর করুন (Restore)</button>
+        </div>
+    </div>
+</div>
+
+<!-- Customer List Modal -->
+<div id="customer-modal" class="modal-overlay" onclick="closeCustomerModal(event)">
+    <div class="modal-sheet" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <span>👥 কাস্টমার তালিকা</span>
+            <button class="modal-close-btn" onclick="closeCustomerModal()">❌ বন্ধ করুন</button>
+        </div>
+        <div class="modal-body">
+            <table>
+                <thead><tr class="customer-table-header"><th>মুছুন</th><th>নাম</th><th>এড্রেস</th><th>বাকি</th><th></th></tr></thead>
+                <tbody id="modal-customer-list"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Calculator Modal -->
+<div id="calc-modal" class="modal-overlay" onclick="closeCalculator(event)">
+    <div class="calc-modal-sheet" onclick="event.stopPropagation()">
+        <div class="calc-display" id="calc-screen">0</div>
+        <div class="calc-buttons">
+            <button class="calc-btn calc-btn-clear" onclick="calcClear()">C</button>
+            <button class="calc-btn calc-btn-op" onclick="calcAppend('/')">÷</button>
+            <button class="calc-btn calc-btn-op" onclick="calcAppend('*')">×</button>
+            <button class="calc-btn calc-btn-clear" onclick="calcBackspace()">⌫</button>
+            <button class="calc-btn calc-btn-num" onclick="calcAppend('7')">7</button>
+            <button class="calc-btn calc-btn-num" onclick="calcAppend('8')">8</button>
+            <button class="calc-btn calc-btn-num" onclick="calcAppend('9')">9</button>
+            <button class="calc-btn calc-btn-op" onclick="calcAppend('-')">-</button>
+            <button class="calc-btn calc-btn-num" onclick="calcAppend('4')">4</button>
+            <button class="calc-btn calc-btn-num" onclick="calcAppend('5')">5</button>
+            <button class="calc-btn calc-btn-num" onclick="calcAppend('6')">6</button>
+            <button class="calc-btn calc-btn-op" onclick="calcAppend('+')">+</button>
+            <button class="calc-btn calc-btn-num" onclick="calcAppend('1')">1</button>
+            <button class="calc-btn calc-btn-num" onclick="calcAppend('2')">2</button>
+            <button class="calc-btn calc-btn-num" onclick="calcAppend('3')">3</button>
+            <button class="calc-btn calc-btn-num" onclick="calcAppend('.')">.</button>
+            <button class="calc-btn calc-btn-num" onclick="calcAppend('0')">0</button>
+            <button class="calc-btn calc-btn-num" onclick="calcAppend('00')">00</button>
+            <button class="calc-btn calc-btn-equal" onclick="calcCalculate()">=</button>
+        </div>
+        <button class="btn-calc-close-main" onclick="closeCalculator()">ক্যালকুলেটর বন্ধ করুন</button>
+    </div>
+</div>
+
 <script>
-    // ⚠️ আপনার Google Cloud Console থেকে পাওয়া OAuth Client ID এখানে বসান
-    const CLIENT_ID = 'YOUR_CLIENT_ID.apps.googleusercontent.com';
-    const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email';
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyPr8gbr-LwIskYwGQ3f8hywH8QceYkWywKXnGmeDfP99KfrQHA-Q8jDVhqmpqXjxbp/exec";
 
     const today = new Date();
     const formattedToday = `${String(today.getDate()).padStart(2, '0')}-${String(today.getMonth() + 1).padStart(2, '0')}-${today.getFullYear()}`;
     document.getElementById('current-date').innerText = formattedToday.replace(/-/g, '/');
     document.getElementById('tx-date').value = formattedToday;
 
-    // In-Memory runtime storage only (No LocalStorage)
-    let tokenClient;
-    let accessToken = null;
-    let spreadsheetId = null;
-    let userEmail = '';
-    let customers = [];
-    let transactions = [];
-    let activeCustomerId = null;
+    let userAccounts = JSON.parse(localStorage.getItem('userAccounts')) || {};
+    let currentUser = localStorage.getItem('currentUser') || null;
+    let shopTitle = '', shopMobile = '', shopAddress = '', customers = [], transactions = [], activeCustomerId = null;
 
-    function showLoading(show, text = "গুগল ড্রাইভের সাথে ডাটা সিঙ্ক হচ্ছে...") {
-        document.getElementById('loading-text').innerText = text;
-        document.getElementById('loading-overlay').style.display = show ? 'flex' : 'none';
-    }
+    let editingCustomerId = null;
+    let editingTxIndex = null;
+    let holdTimer = null;
+    let callBtnHoldTimer = null;
+    let isCallBtnHoldTriggered = false;
+    let isTxFormVisible = true;
+    let toastJustShown = false;
+    let toastTimeout = null;
+    let monthResetTimeout = null;
+    let pendingDeleteCustId = null;
 
-    function showToast(msg) {
-        document.getElementById('toast-message').innerText = msg;
-        document.getElementById('custom-toast').style.display = 'flex';
-        setTimeout(dismissToast, 3000);
-    }
-    function dismissToast() { document.getElementById('custom-toast').style.display = 'none'; }
+    let invoiceMode = 'full';
+    let newInvoiceEntries = [];
+    let pendingPrintAction = null;
 
-    window.onload = function() {
-        tokenClient = google.accounts.oauth2.initTokenClient({
-            client_id: CLIENT_ID,
-            scope: SCOPES,
-            callback: async (response) => {
-                if (response.error !== undefined) {
-                    showToast("লগইন ভুল হয়েছে!");
-                    return;
-                }
-                accessToken = response.access_token;
-                document.getElementById('login-status-msg').innerText = "স্ট্যাটাস: লগইন সফল! ড্রাইভ ফাইল লোড হচ্ছে...";
-                await fetchUserInfo();
-                await setupDriveSpreadsheet();
-            },
-        });
-    };
+    let otpStore = {}; 
+    let resendTimers = {};
+    let authSecurityStates = JSON.parse(localStorage.getItem('authSecurityStates')) || {};
+    
+    // Offline Sync Queue Storage
+    let offlineSyncQueue = JSON.parse(localStorage.getItem('offlineSyncQueue')) || [];
 
-    function handleAuth() {
-        tokenClient.requestAccessToken({ prompt: 'consent' });
-    }
+    const bnMonths = ["জানুয়ারি", "ফেব্রুয়ারি", "মার্চ", "এপ্রিল", "মে", "জুন", "জুলাই", "আগস্ট", "সেপ্টেম্বর", "অক্টোবর", "নভেম্বর", "ডিসেম্বর"];
 
-    async function fetchUserInfo() {
-        try {
-            const res = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-                headers: { 'Authorization': `Bearer ${accessToken}` }
-            });
-            const data = await res.json();
-            userEmail = data.email || 'Google User';
-            document.getElementById('user-email-display').innerText = userEmail;
-        } catch(e) {
-            userEmail = 'Google User';
-        }
-    }
-
-    // ইউজারের ড্রাইভে ফাইল কানেক্ট বা ক্রিয়েট করার লজিক
-    async function setupDriveSpreadsheet() {
-        showLoading(true, "ইউজারের ড্রাইভ থেকে ফাইল খোঁজা হচ্ছে...");
-        try {
-            const searchQuery = encodeURIComponent("name='Dukan_Khata_Data' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false");
-            const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${searchQuery}`, {
-                headers: { 'Authorization': `Bearer ${accessToken}` }
-            });
-            const data = await res.json();
-
-            if (data.files && data.files.length > 0) {
-                spreadsheetId = data.files[0].id;
-            } else {
-                showLoading(true, "ড্রাইভে নতুন ফাইল তৈরি হচ্ছে...");
-                const createRes = await fetch('https://www.googleapis.com/sheets/v4/spreadsheets', {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        properties: { title: 'Dukan_Khata_Data' },
-                        sheets: [{ properties: { title: 'Customers_Master' } }]
-                    })
+    // Service Worker & Cache Strategy for Offline Chrome Load
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            const swScript = `
+                const CACHE_NAME = 'dukan-khata-cache-v3';
+                self.addEventListener('install', e => {
+                    self.skipWaiting();
                 });
-                const createData = await createRes.json();
-                spreadsheetId = createData.spreadsheetId;
-                
-                // Master Header
-                await appendValues('Customers_Master', [['ID', 'Name', 'Address', 'Phone', 'Baki', 'SheetName']]);
-            }
+                self.addEventListener('activate', e => {
+                    e.waitUntil(clients.claim());
+                });
+                self.addEventListener('fetch', e => {
+                    if (e.request.method !== 'GET') return;
+                    e.respondWith(
+                        fetch(e.request).then(networkResponse => {
+                            if (networkResponse && networkResponse.status === 200) {
+                                const responseToCache = networkResponse.clone();
+                                caches.open(CACHE_NAME).then(cache => cache.put(e.request, responseToCache));
+                            }
+                            return networkResponse;
+                        }).catch(() => {
+                            return caches.match(e.request).then(cachedResponse => {
+                                return cachedResponse || caches.match(self.location.href);
+                            });
+                        })
+                    );
+                });
+            `;
+            const blob = new Blob([swScript], { type: 'application/javascript' });
+            navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
+        });
+    }
 
-            document.getElementById('login-view').style.display = 'none';
-            document.getElementById('app-view').style.display = 'flex';
-            await loadCustomersFromDrive();
-        } catch (err) {
-            console.error(err);
-            showToast("ড্রাইভ কানেকশন ত্রুটি!");
-        } finally {
-            showLoading(false);
+    // Dynamic Manifest Generation for Chrome PWA Installation
+    try {
+        const manifestObj = {
+            name: "আবু বক্কর সেলস এন্ড সার্ভিস - হিসাব খাতা",
+            short_name: "হিসাব খাতা",
+            start_url: window.location.href,
+            display: "standalone",
+            background_color: "#ffffff",
+            theme_color: "#0d3b66"
+        };
+        const blobManifest = new Blob([JSON.stringify(manifestObj)], { type: 'application/json' });
+        const manifestLink = document.createElement('link');
+        manifestLink.rel = 'manifest';
+        manifestLink.href = URL.createObjectURL(blobManifest);
+        document.head.appendChild(manifestLink);
+    } catch(e) {}
+
+    function updateNetworkStatusUI() {
+        const netElem = document.getElementById('network-status');
+        const badgeElem = document.getElementById('pending-sync-badge');
+        
+        if (navigator.onLine) {
+            if (netElem) {
+                netElem.innerText = "🟢 অনলাইন";
+                netElem.style.color = "#10b981";
+            }
+        } else {
+            if (netElem) {
+                netElem.innerText = "🟠 অফলাইন মোড";
+                netElem.style.color = "#f59e0b";
+            }
+        }
+
+        if (badgeElem) {
+            if (offlineSyncQueue.length > 0) {
+                badgeElem.style.display = "inline-block";
+                badgeElem.innerText = `অপেক্ষমাণ সিঙ্ক: ${offlineSyncQueue.length}`;
+            } else {
+                badgeElem.style.display = "none";
+            }
         }
     }
 
-    async function loadCustomersFromDrive() {
-        showLoading(true, "কাস্টমার তালিকা লোড হচ্ছে...");
+    async function sendToAppsScript(action, data) {
+        if (!navigator.onLine) {
+            offlineSyncQueue.push({ action: action, data: data, time: Date.now() });
+            localStorage.setItem('offlineSyncQueue', JSON.stringify(offlineSyncQueue));
+            updateNetworkStatusUI();
+            return false;
+        }
+
         try {
-            const res = await fetch(`https://www.googleapis.com/sheets/v4/spreadsheets/${spreadsheetId}/values/Customers_Master!A2:F1000`, {
-                headers: { 'Authorization': `Bearer ${accessToken}` }
+            await fetch(APPS_SCRIPT_URL, {
+                method: "POST",
+                mode: "no-cors",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action: action, data: data })
             });
-            const data = await res.json();
-            customers = [];
-            if (data.values) {
-                data.values.forEach(row => {
-                    if (row[0]) {
-                        customers.push({
-                            id: row[0],
-                            name: row[1] || '',
-                            address: row[2] || '',
-                            phone: row[3] || '',
-                            baki: parseFloat(row[4]) || 0,
-                            sheetName: row[5] || ''
-                        });
+            return true;
+        } catch (e) {
+            console.error("Cloud sync error, queuing: ", e);
+            offlineSyncQueue.push({ action: action, data: data, time: Date.now() });
+            localStorage.setItem('offlineSyncQueue', JSON.stringify(offlineSyncQueue));
+            updateNetworkStatusUI();
+            return false;
+        }
+    }
+
+    async function processOfflineQueue() {
+        updateNetworkStatusUI();
+        if (!navigator.onLine || offlineSyncQueue.length === 0) return;
+
+        let queueCopy = [...offlineSyncQueue];
+        let remaining = [];
+
+        showToast("ইন্টারনেট ফিরে এসেছে! অফলাইন ডাটা গুগলে সিঙ্ক হচ্ছে...");
+
+        for (let item of queueCopy) {
+            try {
+                await fetch(APPS_SCRIPT_URL, {
+                    method: "POST",
+                    mode: "no-cors",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ action: item.action, data: item.data })
+                });
+            } catch (err) {
+                remaining.push(item);
+            }
+        }
+
+        offlineSyncQueue = remaining;
+        localStorage.setItem('offlineSyncQueue', JSON.stringify(offlineSyncQueue));
+        updateNetworkStatusUI();
+
+        if (remaining.length === 0) {
+            showToast("সকল অফলাইন লেনদেন গুগলে সফলভাবে অটো-সিঙ্ক হয়েছে! 🚀");
+        }
+    }
+
+    window.addEventListener('online', processOfflineQueue);
+    window.addEventListener('offline', updateNetworkStatusUI);
+    setInterval(processOfflineQueue, 15000);
+
+    let calcExpression = "";
+    function openCalculator() { document.getElementById('calc-modal').classList.add('active'); }
+    function closeCalculator(e) {
+        if (!e || e.target.classList.contains('modal-overlay') || e.target.classList.contains('btn-calc-close-main')) {
+            document.getElementById('calc-modal').classList.remove('active');
+        }
+    }
+    function calcAppend(val) {
+        if (calcExpression === "0" && val !== ".") calcExpression = val;
+        else calcExpression += val;
+        updateCalcScreen();
+    }
+    function calcClear() { calcExpression = ""; updateCalcScreen(); }
+    function calcBackspace() { calcExpression = calcExpression.slice(0, -1); updateCalcScreen(); }
+    function calcCalculate() {
+        try {
+            if (calcExpression.trim() === "") return;
+            let result = Function('"use strict"; return (' + calcExpression + ')')();
+            calcExpression = result.toString();
+            updateCalcScreen();
+        } catch (e) {
+            document.getElementById('calc-screen').innerText = "Error";
+            calcExpression = "";
+        }
+    }
+    function updateCalcScreen() { document.getElementById('calc-screen').innerText = calcExpression || "0"; }
+
+    function showToast(message, isError = false, autoHideTime = 4000) {
+        if (toastTimeout) clearTimeout(toastTimeout);
+        const toast = document.getElementById('custom-toast');
+        const toastMsg = document.getElementById('toast-message');
+        toastMsg.innerText = message || 'আপনার তথ্য সেভ করা হয়েছে';
+        if (isError) toast.classList.add('error');
+        else toast.classList.remove('error');
+
+        toast.style.display = 'flex';
+        toastJustShown = true;
+        setTimeout(() => { toastJustShown = false; }, 100);
+
+        if (autoHideTime > 0) {
+            toastTimeout = setTimeout(() => { dismissToast(true); }, autoHideTime);
+        }
+    }
+
+    function dismissToast(force = false) {
+        if (!toastJustShown || force) {
+            document.getElementById('custom-toast').style.display = 'none';
+            if (toastTimeout) clearTimeout(toastTimeout);
+        }
+    }
+    function handleGlobalClick(e) { dismissToast(); }
+
+    function openCustomerModal() { document.getElementById('customer-modal').classList.add('active'); }
+    function closeCustomerModal(e) {
+        if (!e || e.target.classList.contains('modal-overlay') || e.target.classList.contains('modal-close-btn')) {
+            document.getElementById('customer-modal').classList.remove('active');
+        }
+    }
+
+    function openBackupRestoreModal() { document.getElementById('backup-restore-modal').classList.add('active'); }
+    function closeBackupRestoreModal(e) {
+        if (!e || e.target.classList.contains('modal-overlay') || e.target.classList.contains('modal-close-btn')) {
+            document.getElementById('backup-restore-modal').classList.remove('active');
+        }
+    }
+
+    function handleCustomerSearch() {
+        const input = document.getElementById('cust-search-input');
+        const clearBtn = document.getElementById('search-clear-btn');
+        if (clearBtn && input) {
+            clearBtn.style.display = input.value.trim().length > 0 ? 'inline' : 'none';
+        }
+        render();
+    }
+
+    function clearCustomerSearch() {
+        const input = document.getElementById('cust-search-input');
+        if (input) {
+            input.value = '';
+            handleCustomerSearch();
+            input.focus();
+        }
+    }
+
+    function onCallBtnTouchStart(e) {
+        isCallBtnHoldTriggered = false;
+        callBtnHoldTimer = setTimeout(() => {
+            isCallBtnHoldTriggered = true;
+            openPhoneEditModal();
+        }, 3000);
+    }
+
+    function onCallBtnTouchEnd(e) {
+        if (callBtnHoldTimer) {
+            clearTimeout(callBtnHoldTimer);
+            callBtnHoldTimer = null;
+        }
+    }
+
+    function handleCallBtnClick(e) {
+        if (isCallBtnHoldTriggered) {
+            isCallBtnHoldTriggered = false;
+            return;
+        }
+        if (!activeCustomerId) return;
+        const activeCust = customers.find(c => c.id === activeCustomerId);
+        if (!activeCust) return;
+
+        if (activeCust.phone && activeCust.phone.trim() !== '') {
+            window.location.href = `tel:${activeCust.phone.trim()}`;
+        } else {
+            showToast('ফোন নাম্বার যোগ করা নেই! ৩ সেকেন্ড চেপে ধরে নাম্বার যোগ করুন।', true);
+        }
+    }
+
+    function openPhoneEditModal() {
+        if (!activeCustomerId) return;
+        const activeCust = customers.find(c => c.id === activeCustomerId);
+        if (!activeCust) return;
+
+        document.getElementById('edit-cust-phone-input').value = activeCust.phone || '';
+        document.getElementById('phone-edit-modal').style.display = 'flex';
+    }
+
+    function closePhoneEditModal() {
+        document.getElementById('phone-edit-modal').style.display = 'none';
+    }
+
+    function saveCustomerPhone() {
+        if (!activeCustomerId) return;
+        const activeCust = customers.find(c => c.id === activeCustomerId);
+        if (!activeCust) return;
+
+        const phoneVal = document.getElementById('edit-cust-phone-input').value.trim();
+        activeCust.phone = phoneVal;
+
+        saveData();
+        render();
+        closePhoneEditModal();
+        showToast('মোবাইল নাম্বার সফলভাবে আপডেট করা হয়েছে!');
+    }
+
+    function openPrintModal() {
+        if (!activeCustomerId) return showToast('কাস্টমার সিলেক্ট করুন!', true);
+        const cust = customers.find(c => c.id === activeCustomerId);
+        if (!cust) return;
+
+        newInvoiceEntries = []; 
+
+        document.getElementById('inv-shop-name').innerText = shopTitle;
+        document.getElementById('inv-shop-address').innerText = shopAddress || 'দোকানের ঠিকানা';
+        document.getElementById('inv-shop-mobile').innerText = `মোবাইল নাম্বার: ${shopMobile || '-'}`;
+        document.getElementById('inv-cust-name').innerText = cust.name;
+        document.getElementById('inv-cust-address').innerText = cust.address || '-';
+        document.getElementById('inv-date').innerText = formattedToday.replace(/-/g, '/');
+
+        document.getElementById('inv-tx-date').value = formattedToday;
+        document.getElementById('inv-tx-desc').value = '';
+        document.getElementById('inv-tx-bill').value = '';
+        document.getElementById('inv-tx-joma').value = '';
+        document.getElementById('inv-tx-baki').value = '0';
+
+        invoiceMode = 'full';
+        updateInvoiceViewMode();
+        document.getElementById('print-modal').classList.add('active');
+    }
+
+    function closePrintModal(e) {
+        if (e && e.target.classList.contains('print-modal-overlay')) return; 
+        document.getElementById('print-modal').classList.remove('active');
+    }
+
+    function setInvoiceMode(mode) {
+        invoiceMode = mode;
+        const btnFull = document.getElementById('btn-mode-full');
+        const btnNew = document.getElementById('btn-mode-new');
+        const newEntryContainer = document.getElementById('invoice-new-entry-container');
+
+        if (mode === 'full') {
+            btnFull.classList.add('active');
+            btnNew.classList.remove('active');
+            newEntryContainer.style.display = 'none';
+            updateInvoiceViewMode();
+        } else {
+            btnNew.classList.add('active');
+            btnFull.classList.remove('active');
+            newEntryContainer.style.display = 'block';
+            updateInvoiceViewMode();
+        }
+    }
+
+    function calculateInvoiceNewLive() {
+        const bill = parseFloat(document.getElementById('inv-tx-bill').value) || 0;
+        const joma = parseFloat(document.getElementById('inv-tx-joma').value) || 0;
+        document.getElementById('inv-tx-baki').value = bill - joma;
+    }
+
+    function saveInvoiceNewTransaction() {
+        const dateInput = document.getElementById('inv-tx-date').value.trim();
+        const desc = document.getElementById('inv-tx-desc').value.trim();
+        const bill = parseFloat(document.getElementById('inv-tx-bill').value) || 0;
+        const joma = parseFloat(document.getElementById('inv-tx-joma').value) || 0;
+        const baki = bill - joma;
+
+        if (!dateInput) return showToast('তারিখ দিন!', true);
+
+        newInvoiceEntries.push({
+            date: dateInput,
+            desc: desc,
+            bill: bill,
+            joma: joma,
+            baki: baki
+        });
+
+        document.getElementById('inv-tx-desc').value = '';
+        document.getElementById('inv-tx-bill').value = '';
+        document.getElementById('inv-tx-joma').value = '';
+        document.getElementById('inv-tx-baki').value = '0';
+
+        updateInvoiceViewMode();
+        showToast("নতুন এন্ট্রি তালিকায় সেভ করা হয়েছে!");
+    }
+
+    function updateInvoiceViewMode() {
+        const cust = customers.find(c => c.id === activeCustomerId);
+        const tbody = document.getElementById('invoice-table-body');
+        tbody.innerHTML = '';
+
+        if (invoiceMode === 'new') {
+            if (newInvoiceEntries.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" style="color: #666; padding: 20px;">কোনো নতুন এন্ট্রি করা হয়নি</td></tr>`;
+                document.getElementById('invoice-totals-box').innerText = `বর্তমান বাকি: ৳ 0`;
+            } else {
+                let html = '';
+                let totalBaki = 0;
+                newInvoiceEntries.forEach(t => {
+                    totalBaki += t.baki;
+                    html += `
+                        <tr>
+                            <td>${t.date}</td>
+                            <td>${t.desc || '-'}</td>
+                            <td>৳ ${t.bill}</td>
+                            <td style="color: #16a34a; font-weight: bold;">৳ ${t.joma}</td>
+                            <td style="color: #dc2626; font-weight: bold;">৳ ${t.baki}</td>
+                        </tr>`;
+                });
+                tbody.innerHTML = html;
+                document.getElementById('invoice-totals-box').innerText = `বর্তমান বাকি: ৳ ${totalBaki}`;
+            }
+            return;
+        }
+
+        let custTxs = transactions.filter(t => t.customerId === activeCustomerId);
+        if (custTxs.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" style="color: #666; padding: 20px;">কোনো লেনদেন পাওয়া যায়নি</td></tr>`;
+        } else {
+            let html = '';
+            custTxs.forEach(t => {
+                let sBaki = t.bill - t.joma;
+                html += `
+                    <tr>
+                        <td>${t.date}</td>
+                        <td>${t.desc || '-'}</td>
+                        <td>৳ ${t.bill}</td>
+                        <td style="color: #16a34a; font-weight: bold;">৳ ${t.joma}</td>
+                        <td style="color: #dc2626; font-weight: bold;">৳ ${sBaki}</td>
+                    </tr>`;
+            });
+            tbody.innerHTML = html;
+        }
+        document.getElementById('invoice-totals-box').innerText = `সর্বমোট বাকি: ৳ ${cust ? cust.baki : 0}`;
+    }
+
+    function handlePrintOrPdfClick(action) {
+        if (invoiceMode === 'new' && newInvoiceEntries.length > 0) {
+            pendingPrintAction = action;
+            document.getElementById('main-save-confirm-modal').style.display = 'flex';
+        } else {
+            if (action === 'print') triggerDirectPrint();
+            else if (action === 'download') downloadPDFInvoice();
+        }
+    }
+
+    function confirmSaveToMain(shouldSave) {
+        document.getElementById('main-save-confirm-modal').style.display = 'none';
+        
+        if (shouldSave && activeCustomerId) {
+            const activeCust = customers.find(c => c.id === activeCustomerId);
+            if (activeCust) {
+                newInvoiceEntries.forEach(entry => {
+                    activeCust.baki += (entry.bill - entry.joma);
+                    transactions.push({
+                        customerId: activeCustomerId,
+                        date: entry.date,
+                        desc: entry.desc,
+                        bill: entry.bill,
+                        joma: entry.joma,
+                        baki: entry.baki
+                    });
+                });
+                saveData();
+                render();
+                showToast("লেনদেন সফলভাবে মেইন হিস্টরিতে সেভ করা হয়েছে!");
+            }
+        }
+
+        const action = pendingPrintAction;
+        pendingPrintAction = null;
+
+        if (action === 'print') {
+            triggerDirectPrint();
+        } else if (action === 'download') {
+            downloadPDFInvoice();
+        }
+    }
+
+    function triggerDirectPrint() { window.print(); }
+
+    function downloadPDFInvoice() {
+        if (typeof html2pdf === 'undefined') {
+            return showToast('PDF ডাউনলোড করার জন্য ইন্টারনেটের প্রয়োজন!', true);
+        }
+        const element = document.getElementById('printable-invoice-area');
+        const cust = customers.find(c => c.id === activeCustomerId);
+
+        const noPrintElems = element.querySelectorAll('.no-print');
+        noPrintElems.forEach(el => el.style.display = 'none');
+
+        const opt = {
+            margin:       [8, 8, 8, 8],
+            filename:     `Customer_Copy_${cust ? cust.name : 'Invoice'}.pdf`,
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2, useCORS: true, scrollX: 0, scrollY: 0 },
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+
+        showToast("PDF ডাউনলোড হচ্ছে, দয়া করে অপেক্ষা করুন...");
+        html2pdf().set(opt).from(element).save().then(() => {
+            if (invoiceMode === 'new') {
+                document.getElementById('invoice-new-entry-container').style.display = 'block';
+            }
+            document.querySelectorAll('.invoice-toggle-row').forEach(el => el.style.display = 'flex');
+        });
+    }
+
+    function downloadExcelBackup() {
+        if (typeof XLSX === 'undefined') {
+            return showToast('এক্সেল ডাইনলোডের জন্য ইন্টারনেটের প্রয়োজন!', true);
+        }
+        if (!currentUser) return showToast('লগইন করা নেই!', true);
+
+        const wb = XLSX.utils.book_new();
+
+        let summaryData = [
+            ["দোকানের নাম:", shopTitle],
+            ["মোবাইল নাম্বার:", shopMobile],
+            ["অ্যাড্রেস:", shopAddress],
+            ["ব্যাকআপ সময়:", new Date().toLocaleString()],
+            [],
+            ["কাস্টমার আইডি", "নাম", "এড্রেস", "মোবাইল নাম্বার", "বর্তমান বাকি (৳)"]
+        ];
+        customers.forEach(c => {
+            summaryData.push([c.id, c.name, c.address, c.phone || '', c.baki]);
+        });
+        const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+        XLSX.utils.book_append_sheet(wb, wsSummary, "Overview");
+
+        customers.forEach(c => {
+            let custTxs = transactions.filter(t => t.customerId === c.id);
+            let sheetData = [
+                ["কাস্টমার নাম:", c.name],
+                ["ঠিকানা:", c.address],
+                ["মোবাইল:", c.phone || ''],
+                ["বর্তমান বাকি:", c.baki],
+                [],
+                ["তারিখ", "বিবরণ", "বিল (৳)", "জমা (৳)", "বাকি (৳)"]
+            ];
+            custTxs.forEach(t => {
+                sheetData.push([t.date, t.desc || "", t.bill, t.joma, (t.bill - t.joma)]);
+            });
+            const wsCust = XLSX.utils.aoa_to_sheet(sheetData);
+            let safeName = c.name.replace(/[:\\\/?*\[\]]/g, "_").substring(0, 31);
+            if(!safeName) safeName = "Customer_" + c.id;
+            XLSX.utils.book_append_sheet(wb, wsCust, safeName);
+        });
+
+        XLSX.writeFile(wb, `Backup_${shopTitle}_${formattedToday}.xlsx`);
+        showToast("রঙিন এক্সেল ফাইল ব্যাকআপ সফলভাবে ডাউনলোড হয়েছে!");
+    }
+
+    function restoreExcelBackup() {
+        if (typeof XLSX === 'undefined') {
+            return showToast('এক্সেল ডাটা রিস্টোরের জন্য ইন্টারনেটের প্রয়োজন!', true);
+        }
+        const fileInput = document.getElementById('excel-file-input');
+        if (!fileInput.files || fileInput.files.length === 0) {
+            return showToast('দয়া করে একটি .xlsx ব্যাকআপ ফাইল সিলেক্ট করুন!', true);
+        }
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+
+        reader.onload = function(e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                
+                let restoredCustomers = [];
+                let restoredTransactions = [];
+                let backupTimestamp = Date.now();
+
+                if(workbook.Sheets["Overview"]) {
+                    let overviewJson = XLSX.utils.sheet_to_json(workbook.Sheets["Overview"], { header: 1 });
+                    if(overviewJson[0] && overviewJson[0][1]) { shopTitle = overviewJson[0][1]; }
+                    if(overviewJson[1] && overviewJson[1][1]) { shopMobile = overviewJson[1][1]; }
+                    if(overviewJson[2] && overviewJson[2][1]) { shopAddress = overviewJson[2][1]; }
+                }
+
+                workbook.SheetNames.forEach(sheetName => {
+                    if(sheetName === "Overview") return;
+                    let sheet = workbook.Sheets[sheetName];
+                    let rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+                    
+                    if(rows.length > 0) {
+                        let cName = rows[0] && rows[0][1] ? rows[0][1] : sheetName;
+                        let cAddress = rows[1] && rows[1][1] ? rows[1][1] : "-";
+                        let cPhone = rows[2] && rows[2][0] === "মোবাইল:" ? rows[2][1] : "";
+                        let cId = Date.now() + Math.floor(Math.random() * 1000);
+                        
+                        let cBaki = 0;
+                        let txStartIndex = 5;
+                        for(let i=0; i<rows.length; i++) {
+                            if(rows[i][0] === "তারিখ" || rows[i][0] === "Date") {
+                                txStartIndex = i + 1;
+                                break;
+                            }
+                        }
+
+                        let custTxs = [];
+                        for(let i = txStartIndex; i < rows.length; i++) {
+                            let r = rows[i];
+                            if(!r || !r[0]) continue;
+                            let tDate = r[0];
+                            let tDesc = r[1] || "";
+                            let tBill = parseFloat(r[2]) || 0;
+                            let tJoma = parseFloat(r[3]) || 0;
+                            
+                            cBaki += (tBill - tJoma);
+                            custTxs.push({
+                                customerId: cId,
+                                date: tDate,
+                                desc: tDesc,
+                                bill: tBill,
+                                joma: tJoma,
+                                baki: tBill - tJoma,
+                                timestamp: backupTimestamp
+                            });
+                        }
+
+                        restoredCustomers.push({ id: cId, name: cName, address: cAddress, phone: cPhone, baki: cBaki });
+                        restoredTransactions.push(...custTxs);
                     }
                 });
+
+                if(restoredCustomers.length === 0) {
+                    throw new Error("No customer data found in Excel");
+                }
+
+                let existingCustMap = new Map();
+                customers.forEach(c => existingCustMap.set(c.name.trim().toLowerCase(), c));
+
+                restoredCustomers.forEach(rc => {
+                    let key = rc.name.trim().toLowerCase();
+                    if(existingCustMap.has(key)) {
+                        let existingC = existingCustMap.get(key);
+                        if(rc.phone) existingC.phone = rc.phone;
+                        let backupCustTxs = restoredTransactions.filter(t => t.customerId === rc.id);
+                        backupCustTxs.forEach(bt => bt.customerId = existingC.id);
+                        
+                        let currentTxs = transactions.filter(t => t.customerId === existingC.id);
+                        
+                        transactions = transactions.filter(t => t.customerId !== existingC.id);
+                        transactions.push(...currentTxs, ...backupCustTxs);
+
+                        let totalB = 0, totalJ = 0;
+                        transactions.filter(t => t.customerId === existingC.id).forEach(t => {
+                            totalB += t.bill;
+                            totalJ += t.joma;
+                        });
+                        existingC.baki = totalB - totalJ;
+                    } else {
+                        customers.push(rc);
+                        let rcTxs = restoredTransactions.filter(t => t.customerId === rc.id);
+                        transactions.push(...rcTxs);
+                    }
+                });
+
+                if (userAccounts[currentUser]) {
+                    userAccounts[currentUser].shopTitle = shopTitle;
+                    userAccounts[currentUser].shopMobile = shopMobile;
+                    userAccounts[currentUser].shopAddress = shopAddress;
+                    localStorage.setItem('userAccounts', JSON.stringify(userAccounts));
+                }
+
+                saveData();
+                render();
+                closeBackupRestoreModal();
+                showToast("এক্সেল ডাটা সফলভাবে রিস্টোর ও মার্জ করা হয়েছে!");
+            } catch (err) {
+                console.error(err);
+                showToast('এক্সেল ফাইলটি সঠিক ফরম্যাটের নয় বা ত্রুটিপূর্ণ!', true);
             }
-            renderCustomerList();
-        } catch (e) {
-            console.error(e);
-        } finally {
-            showLoading(false);
+        };
+
+        reader.readAsArrayBuffer(file);
+    }
+
+    function togglePasswordVisibility(id, icon) {
+        const input = document.getElementById(id);
+        input.type = input.type === "password" ? "text" : "password";
+        icon.innerText = input.type === "password" ? "👁️" : "🙈";
+    }
+
+    function initApp() {
+        updateNetworkStatusUI();
+        // Auto Fallback to local offline account if offline or no account set
+        if (!currentUser) {
+            const keys = Object.keys(userAccounts);
+            if (keys.length > 0) {
+                currentUser = keys[0];
+                localStorage.setItem('currentUser', currentUser);
+            } else {
+                currentUser = 'offline_user@dukan.local';
+                userAccounts[currentUser] = {
+                    shopTitle: 'আবু বক্কর সেলস এন্ড সার্ভিস',
+                    shopMobile: '',
+                    shopAddress: '',
+                    password: 'offline'
+                };
+                localStorage.setItem('userAccounts', JSON.stringify(userAccounts));
+                localStorage.setItem('currentUser', currentUser);
+            }
+        }
+
+        if (currentUser && userAccounts[currentUser]) {
+            hideAll();
+            document.getElementById('app-view').style.display = 'flex';
+            document.getElementById('user-email-display').innerText = currentUser;
+            loadUserData();
+            populateMonthDropdown();
+            render();
+            processOfflineQueue();
+        } else {
+            showLogin();
         }
     }
 
-    function renderCustomerList() {
+    function showSignUp() {
+        hideAll();
+        document.getElementById('signup-view').style.display = 'block';
+        document.getElementById('otp-box').style.display = 'none';
+        document.getElementById('btn-verify-trigger').style.display = 'block';
+        document.getElementById('signup-shop').value = '';
+        document.getElementById('signup-mobile').value = '';
+        document.getElementById('signup-address').value = '';
+        document.getElementById('signup-email').value = '';
+        document.getElementById('signup-pass').value = '';
+        document.getElementById('otp-input').value = '';
+    }
+
+    function showLogin() {
+        hideAll();
+        document.getElementById('login-view').style.display = 'block';
+        checkLoginLockStatus();
+    }
+
+    function showDeleteAccount() {
+        hideAll();
+        document.getElementById('delete-view').style.display = 'block';
+        document.getElementById('delete-otp-box').style.display = 'none';
+        document.getElementById('btn-delete-verify-trigger').style.display = 'block';
+        document.getElementById('delete-email').value = '';
+        document.getElementById('delete-pass').value = '';
+        document.getElementById('delete-otp-input').value = '';
+    }
+
+    function showResetPassword() {
+        hideAll();
+        document.getElementById('reset-view').style.display = 'block';
+        document.getElementById('reset-step2-box').style.display = 'none';
+        document.getElementById('new-pass-box').style.display = 'none';
+        document.getElementById('btn-reset-verify-trigger').style.display = 'block';
+        document.getElementById('reset-email').value = '';
+        document.getElementById('reset-otp-input').value = '';
+        document.getElementById('reset-new-pass').value = '';
+        document.getElementById('reset-confirm-pass').value = '';
+    }
+
+    function hideAll() {
+        ['login-view', 'signup-view', 'delete-view', 'reset-view', 'app-view'].forEach(id => {
+            document.getElementById(id).style.display = 'none';
+        });
+    }
+
+    function getSecurityState(email, feature) {
+        if (!authSecurityStates[email]) authSecurityStates[email] = {};
+        if (!authSecurityStates[email][feature]) {
+            authSecurityStates[email][feature] = { wrongAttempts: 0, lockUntil: 0, lockDurationMinutes: 0, timerInterval: null };
+        }
+        return authSecurityStates[email][feature];
+    }
+    function saveSecurityStates() { localStorage.setItem('authSecurityStates', JSON.stringify(authSecurityStates)); }
+
+    function startLiveTimer(email, feature, timerElementId, btnElement, onCompleteCallback) {
+        const state = getSecurityState(email, feature);
+        if (btnElement) btnElement.disabled = true;
+        const timerElem = document.getElementById(timerElementId);
+        if (timerElem) timerElem.style.display = 'block';
+
+        if (state.timerInterval) clearInterval(state.timerInterval);
+
+        const updateDisplay = () => {
+            const now = Date.now();
+            const distance = state.lockUntil - now;
+            if (distance <= 0) {
+                clearInterval(state.timerInterval);
+                state.timerInterval = null;
+                if (timerElem) timerElem.style.display = 'none';
+                if (btnElement) {
+                    btnElement.disabled = false;
+                    btnElement.innerText = "ভেরিফিকেশন কোড পাঠান";
+                }
+                saveSecurityStates();
+                if (typeof onCompleteCallback === 'function') onCompleteCallback();
+            } else {
+                const totalSec = Math.floor(distance / 1000);
+                const min = Math.floor(totalSec / 60);
+                const sec = totalSec % 60;
+                if (timerElem) timerElem.innerText = `অ্যাকাউন্ট সাময়িকভাবে লক আছে। অপেক্ষা করুন: ${min}:${sec < 10 ? '0' : ''}${sec}`;
+            }
+        };
+        updateDisplay();
+        state.timerInterval = setInterval(updateDisplay, 1000);
+    }
+
+    function startResendCountdown(type) {
+        let timeLeft = 60;
+        const timerSpan = document.getElementById(`${type}-timer`);
+        const resendBtn = document.getElementById(`${type}-resend-btn`);
+        if(!resendBtn || !timerSpan) return;
+
+        resendBtn.style.color = '#9ca3af';
+        resendBtn.style.pointerEvents = 'none';
+
+        if (resendTimers[type]) clearInterval(resendTimers[type]);
+
+        resendTimers[type] = setInterval(() => {
+            timeLeft--;
+            timerSpan.innerText = timeLeft;
+            if (timeLeft <= 0) {
+                clearInterval(resendTimers[type]);
+                resendBtn.style.color = '#1d4ed8';
+                resendBtn.style.pointerEvents = 'auto';
+            }
+        }, 1000);
+    }
+
+    function checkLoginLockStatus() {
+        const emailInput = document.getElementById('login-email').value.trim().toLowerCase();
+        const loginBtn = document.getElementById('btn-login');
+        const lockTimerDiv = document.getElementById('login-lock-timer');
+        if (!emailInput) return;
+
+        const state = getSecurityState(emailInput, 'login');
+        const now = Date.now();
+        if (state.lockUntil > now) {
+            loginBtn.disabled = true;
+            lockTimerDiv.style.display = 'block';
+            if (state.timerInterval) clearInterval(state.timerInterval);
+            state.timerInterval = setInterval(() => {
+                const dist = state.lockUntil - Date.now();
+                if (dist <= 0) {
+                    clearInterval(state.timerInterval);
+                    state.timerInterval = null;
+                    loginBtn.disabled = false;
+                    lockTimerDiv.style.display = 'none';
+                    state.wrongAttempts = 0;
+                    saveSecurityStates();
+                } else {
+                    const m = Math.floor(dist / 60000);
+                    const s = Math.floor((dist % 60000) / 1000);
+                    lockTimerDiv.innerText = `ভুল পাসওয়ার্ডের কারণে লক রয়েছে। অপেক্ষা করুন: ${m}:${s < 10 ? '0': ''}${s}`;
+                }
+            }, 1000);
+        } else {
+            loginBtn.disabled = false;
+            lockTimerDiv.style.display = 'none';
+        }
+    }
+
+    function sendOtp(type) {
+        if (!navigator.onLine) {
+            return showToast('OTP কোড পাঠাতে ইন্টারনেটের প্রয়োজন!', true);
+        }
+        let email = '', triggerBtnId = '', boxId = '';
+        if (type === 'signup') {
+            const shop = document.getElementById('signup-shop').value.trim();
+            const mobile = document.getElementById('signup-mobile').value.trim();
+            const address = document.getElementById('signup-address').value.trim();
+            email = document.getElementById('signup-email').value.trim().toLowerCase();
+            const pass = document.getElementById('signup-pass').value.trim();
+            if (!shop || shop.length > 35) return showToast('৩৫ অক্ষরের মধ্যে দোকানের নাম দিন!', true);
+            if (!mobile) return showToast('মোবাইল নাম্বার দিন!', true);
+            if (!address) return showToast('দোকানের ফুল অ্যাড্রেস দিন!', true);
+            if (!email.includes('@')) return showToast('সঠিক জিমেইল আইডি দিন!', true);
+            if (pass.length !== 8) return showToast('পাসওয়ার্ড ঠিক ৮ সংখ্যার হতে হবে!', true);
+            if (userAccounts[email]) return showToast('এই জিমেইল দিয়ে ইতিমধ্যে অ্যাকাউন্ট খোলা হয়েছে!', true);
+            triggerBtnId = 'btn-verify-trigger';
+            boxId = 'otp-box';
+        } else if (type === 'reset') {
+            email = document.getElementById('reset-email').value.trim().toLowerCase();
+            if (!email || !userAccounts[email]) return showToast('কোনো অ্যাকাউন্ট পাওয়া যায়নি!', true);
+            triggerBtnId = 'btn-reset-verify-trigger';
+            boxId = 'reset-step2-box';
+        } else if (type === 'delete') {
+            email = document.getElementById('delete-email').value.trim().toLowerCase();
+            const pass = document.getElementById('delete-pass').value.trim();
+            if (!userAccounts[email] || userAccounts[email].password !== pass) return showToast('তথ্য ভুল!', true);
+            triggerBtnId = 'btn-delete-verify-trigger';
+            boxId = 'delete-otp-box';
+        }
+
+        const state = getSecurityState(email, type);
+        if (state.lockUntil > Date.now()) {
+            showToast('এই জিমেইলটি বর্তমানে লক রয়েছে!', true);
+            return;
+        }
+
+        const otp = Math.floor(1000 + Math.random() * 9000).toString();
+        otpStore[email + '_' + type] = otp;
+        sendToAppsScript("sendOtp", { email: email, otp: otp });
+
+        showToast('আপনার জিমেইলে ৪ সংখ্যার ভেরিফিকেশন কোড পাঠানো হয়েছে!');
+        document.getElementById(boxId).style.display = 'block';
+        document.getElementById(triggerBtnId).style.display = 'none';
+        startResendCountdown(type);
+    }
+
+    function resendOtp(type) {
+        sendOtp(type);
+        showToast('কোডটি পুনরায় পাঠানো হয়েছে!');
+    }
+
+    function confirmSignUp() {
+        const email = document.getElementById('signup-email').value.trim().toLowerCase();
+        const enteredOtp = document.getElementById('otp-input').value.trim();
+        const correctOtp = otpStore[email + '_signup'];
+        const state = getSecurityState(email, 'signup');
+
+        if (state.lockUntil > Date.now()) return showToast('অ্যাকাউন্ট লক রয়েছে!', true);
+
+        if (enteredOtp === correctOtp) {
+            state.wrongAttempts = 0;
+            saveSecurityStates();
+            const shop = document.getElementById('signup-shop').value.trim();
+            const mobile = document.getElementById('signup-mobile').value.trim();
+            const address = document.getElementById('signup-address').value.trim();
+            const pass = document.getElementById('signup-pass').value.trim();
+
+            userAccounts[email] = { shopTitle: shop, shopMobile: mobile, shopAddress: address, password: pass };
+            localStorage.setItem('userAccounts', JSON.stringify(userAccounts));
+            sendToAppsScript("saveAccount", { email: email, shopTitle: shop, shopMobile: mobile, shopAddress: address, password: pass });
+
+            showToast('আপনার Sign Up সফল হয়েছে!');
+            showLogin();
+        } else {
+            state.wrongAttempts++;
+            if (state.wrongAttempts >= 3) {
+                state.lockDurationMinutes = state.lockDurationMinutes === 0 ? 1 : state.lockDurationMinutes + 5;
+                state.lockUntil = Date.now() + (state.lockDurationMinutes * 60 * 1000);
+                state.wrongAttempts = 0;
+                saveSecurityStates();
+                startLiveTimer(email, 'signup', 'signup-lock-timer', document.getElementById('btn-signup-verify'));
+                showToast(`কোড বারবার ভুল হয়েছে। ${state.lockDurationMinutes} মিনিট লক থাকল।`, true);
+            } else {
+                saveSecurityStates();
+                showToast(`ভুল কোড! আর ${3 - state.wrongAttempts} বার ভুল করলে লক হবে।`, true);
+            }
+        }
+    }
+
+    function verifyResetOtp() {
+        const email = document.getElementById('reset-email').value.trim().toLowerCase();
+        const enteredOtp = document.getElementById('reset-otp-input').value.trim();
+        const correctOtp = otpStore[email + '_reset'];
+        const state = getSecurityState(email, 'reset');
+
+        if (state.lockUntil > Date.now()) return showToast('অ্যাকাউন্ট লক রয়েছে!', true);
+
+        if (enteredOtp === correctOtp) {
+            state.wrongAttempts = 0;
+            saveSecurityStates();
+            showToast('কোড ভেরিফাই হয়েছে! নতুন পাসওয়ার্ড দিন।');
+            document.getElementById('new-pass-box').style.display = 'block';
+            document.getElementById('btn-verify-otp').style.display = 'none';
+        } else {
+            state.wrongAttempts++;
+            if (state.wrongAttempts >= 3) {
+                state.lockDurationMinutes = state.lockDurationMinutes === 0 ? 1 : state.lockDurationMinutes + 5;
+                state.lockUntil = Date.now() + (state.lockDurationMinutes * 60 * 1000);
+                state.wrongAttempts = 0;
+                saveSecurityStates();
+                startLiveTimer(email, 'reset', 'reset-lock-timer', document.getElementById('btn-verify-otp'));
+                showToast(`কোড বারবার ভুল হয়েছে। ${state.lockDurationMinutes} মিনিট লক থাকল।`, true);
+            } else {
+                saveSecurityStates();
+                showToast(`ভুল কোড! আর ${3 - state.wrongAttempts} বার ভুল করলে লক হবে।`, true);
+            }
+        }
+    }
+
+    function saveNewPassword() {
+        const email = document.getElementById('reset-email').value.trim().toLowerCase();
+        const newPass = document.getElementById('reset-new-pass').value.trim();
+        const confirmPass = document.getElementById('reset-confirm-pass').value.trim();
+
+        if (newPass.length !== 8 || newPass !== confirmPass) return showToast('পাসওয়ার্ড সঠিক ও ৮ সংখ্যার দিন!', true);
+        userAccounts[email].password = newPass;
+        localStorage.setItem('userAccounts', JSON.stringify(userAccounts));
+        showToast('পাসওয়ার্ড সফলভাবে আপডেট হয়েছে!');
+        showLogin();
+    }
+
+    function confirmDeleteAccount() {
+        const email = document.getElementById('delete-email').value.trim().toLowerCase();
+        const enteredOtp = document.getElementById('delete-otp-input').value.trim();
+        const correctOtp = otpStore[email + '_delete'];
+        const state = getSecurityState(email, 'delete');
+
+        if (state.lockUntil > Date.now()) return showToast('অ্যাকাউন্ট লক রয়েছে!', true);
+
+        if (enteredOtp === correctOtp) {
+            delete userAccounts[email];
+            localStorage.setItem('userAccounts', JSON.stringify(userAccounts));
+            localStorage.removeItem(`customers_${email}`);
+            localStorage.removeItem(`transactions_${email}`);
+            localStorage.removeItem(`activeCustomerId_${email}`);
+
+            showToast('আপনার একাউন্ট সম্পূর্ণ মুছে ফেলা হয়েছে!');
+            logout();
+        } else {
+            state.wrongAttempts++;
+            if (state.wrongAttempts >= 3) {
+                state.lockDurationMinutes = state.lockDurationMinutes === 0 ? 1 : state.lockDurationMinutes + 5;
+                state.lockUntil = Date.now() + (state.lockDurationMinutes * 60 * 1000);
+                state.wrongAttempts = 0;
+                saveSecurityStates();
+                startLiveTimer(email, 'delete', 'delete-lock-timer', document.getElementById('btn-delete-verify-otp'));
+                showToast(`কোড বারবার ভুল হয়েছে। ${state.lockDurationMinutes} মিনিট লক থাকল।`, true);
+            } else {
+                saveSecurityStates();
+                showToast(`ভুল কোড! আর ${3 - state.wrongAttempts} বার ভুল করলে লক হবে।`, true);
+            }
+        }
+    }
+
+    function login() {
+        const email = document.getElementById('login-email').value.trim().toLowerCase();
+        const pass = document.getElementById('login-pass').value.trim();
+        const state = getSecurityState(email, 'login');
+
+        if (state.lockUntil > Date.now()) {
+            showToast('অ্যাকাউন্ট লক রয়েছে!', true);
+            return;
+        }
+
+        if (!userAccounts[email] || userAccounts[email].password !== pass) {
+            state.wrongAttempts++;
+            if (state.wrongAttempts >= 3) {
+                state.lockDurationMinutes = state.lockDurationMinutes === 0 ? 1 : state.lockDurationMinutes + 5;
+                state.lockUntil = Date.now() + (state.lockDurationMinutes * 60 * 1000);
+                state.wrongAttempts = 0;
+                saveSecurityStates();
+                checkLoginLockStatus();
+                showToast(`পাসওয়ার্ড বারবার ভুল হয়েছে। একাউন্ট লক করা হয়েছে।`, true);
+            } else {
+                saveSecurityStates();
+                showToast(`ইমেইল বা পাসওয়ার্ড ভুল! আর ${3 - state.wrongAttempts} বার ভুল করলে লক হবে।`, true);
+            }
+            return;
+        }
+
+        state.wrongAttempts = 0;
+        state.lockUntil = 0;
+        saveSecurityStates();
+
+        currentUser = email;
+        localStorage.setItem('currentUser', currentUser);
+        initApp();
+    }
+
+    function logout() {
+        currentUser = null;
+        localStorage.removeItem('currentUser');
+        showLogin();
+    }
+
+    function loadUserData() {
+        if (!currentUser) return;
+        shopTitle = userAccounts[currentUser].shopTitle || 'আবু বক্কর সেলস এন্ড সার্ভিস';
+        shopMobile = userAccounts[currentUser].shopMobile || '';
+        shopAddress = userAccounts[currentUser].shopAddress || '';
+        customers = JSON.parse(localStorage.getItem(`customers_${currentUser}`)) || [];
+        transactions = JSON.parse(localStorage.getItem(`transactions_${currentUser}`)) || [];
+        activeCustomerId = null;
+    }
+
+    function saveData() {
+        if (!currentUser) return;
+        localStorage.setItem(`customers_${currentUser}`, JSON.stringify(customers));
+        localStorage.setItem(`transactions_${currentUser}`, JSON.stringify(transactions));
+        localStorage.setItem(`activeCustomerId_${currentUser}`, JSON.stringify(activeCustomerId));
+
+        sendToAppsScript("saveUserData", { email: currentUser, customers: customers, transactions: transactions });
+    }
+
+    function startHold(actionFn, holdTime = 3000) { holdTimer = setTimeout(() => { actionFn(); }, holdTime); }
+    function cancelHold() { if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; } }
+
+    function openShopEditModal() {
+        document.getElementById('edit-shop-name').value = shopTitle;
+        document.getElementById('edit-shop-mobile').value = shopMobile;
+        document.getElementById('edit-shop-address').value = shopAddress;
+        document.getElementById('shop-edit-modal').style.display = 'flex';
+    }
+
+    function closeShopEditModal() {
+        document.getElementById('shop-edit-modal').style.display = 'none';
+    }
+
+    function confirmUpdateShop() {
+        const newName = document.getElementById('edit-shop-name').value.trim();
+        const newMobile = document.getElementById('edit-shop-mobile').value.trim();
+        const newAddress = document.getElementById('edit-shop-address').value.trim();
+
+        if (!newName || newName.length > 35) return showToast('দোকানের নাম ৩৫ অক্ষরের মধ্যে লিখুন!', true);
+        if (!newMobile) return showToast('মোবাইল নাম্বার দিন!', true);
+        if (!newAddress) return showToast('অ্যাড্রেস দিন!', true);
+
+        shopTitle = newName;
+        shopMobile = newMobile;
+        shopAddress = newAddress;
+
+        if (userAccounts[currentUser]) {
+            userAccounts[currentUser].shopTitle = shopTitle;
+            userAccounts[currentUser].shopMobile = shopMobile;
+            userAccounts[currentUser].shopAddress = shopAddress;
+            localStorage.setItem('userAccounts', JSON.stringify(userAccounts));
+        }
+
+        closeShopEditModal();
+        render();
+        showToast('দোকানের তথ্য সফলভাবে আপডেট করা হয়েছে!');
+    }
+
+    function populateMonthDropdown() {
+        const select = document.getElementById('month-select');
+        select.innerHTML = '';
+        const currYear = today.getFullYear();
+        const currMonth = today.getMonth();
+
+        for (let i = 0; i < 12; i++) {
+            let d = new Date(currYear, currMonth - i, 1);
+            let mIndex = d.getMonth();
+            let yVal = d.getFullYear();
+            let val = `${yVal}-${String(mIndex + 1).padStart(2, '0')}`;
+            let label = `${bnMonths[mIndex]} ${yVal.toString().replace(/\d/g, d => "০১২৩৪৫৬৭৮৯"[d]) || yVal}`;
+            
+            let opt = document.createElement('option');
+            opt.value = val;
+            opt.innerText = i === 0 ? `চলতি মাস` : label;
+            select.appendChild(opt);
+        }
+    }
+
+    function handleMonthChange() {
+        if (monthResetTimeout) { clearTimeout(monthResetTimeout); monthResetTimeout = null; }
+        const select = document.getElementById('month-select');
+        const selectedVal = select.value;
+        const currentVal = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+        calculateAndDisplayMonthStats(selectedVal);
+
+        if (selectedVal !== currentVal) {
+            monthResetTimeout = setTimeout(() => {
+                select.value = currentVal;
+                calculateAndDisplayMonthStats(currentVal);
+            }, 10000);
+        }
+    }
+
+    function calculateAndDisplayMonthStats(monthKey) {
+        let totalBillMonth = 0, totalJomaMonth = 0;
+        transactions.forEach(t => {
+            if (!t.date) return;
+            const parts = t.date.split('-');
+            if (parts.length === 3) {
+                const txMonthKey = `${parts[2]}-${parts[1]}`;
+                if (txMonthKey === monthKey) {
+                    totalBillMonth += (parseFloat(t.bill) || 0);
+                    totalJomaMonth += (parseFloat(t.joma) || 0);
+                }
+            }
+        });
+        let netBakiMonth = totalBillMonth - totalJomaMonth;
+        document.getElementById('month-baki-val').innerText = `৳${netBakiMonth}`;
+        document.getElementById('month-joma-val').innerText = `৳${totalJomaMonth}`;
+    }
+
+    function editCustomerTrigger(custId) {
+        const cust = customers.find(c => c.id === custId);
+        if (!cust) return;
+        editingCustomerId = custId;
+        document.getElementById('cust-name').value = cust.name;
+        document.getElementById('cust-address').value = cust.address;
+        document.getElementById('cust-form-title').innerText = "✏️ কাস্টমার এডিট করুন:";
+        document.getElementById('btn-cancel-cust').style.display = "block";
+        document.getElementById('btn-save-cust').innerText = "Save";
+        document.getElementById('btn-save-cust').style.backgroundColor = "#4c1d95";
+        closeCustomerModal();
+        showToast("ট্যাব করা তথ্য উপরের ঘরে পাঠানো হয়েছে, সঠিক তথ্য দিয়ে সেভ করুন");
+    }
+
+    function cancelCustEdit() {
+        editingCustomerId = null;
+        document.getElementById('cust-name').value = '';
+        document.getElementById('cust-address').value = '';
+        document.getElementById('cust-form-title').innerText = "+ নতুন কাস্টমার যোগ করুন";
+        document.getElementById('btn-cancel-cust').style.display = "none";
+        document.getElementById('btn-save-cust').innerText = "যোগ";
+        document.getElementById('btn-save-cust').style.backgroundColor = "#4c1d95";
+    }
+
+    function editTxTrigger(globalIndex) {
+        const tx = transactions[globalIndex];
+        if (!tx) return;
+        editingTxIndex = globalIndex;
+        document.getElementById('tx-date').value = tx.date;
+        document.getElementById('tx-desc').value = tx.desc;
+        document.getElementById('tx-bill').value = tx.bill;
+        document.getElementById('tx-joma').value = tx.joma;
+
+        document.getElementById('tx-input-fields').style.display = 'flex';
+        isTxFormVisible = true;
+
+        document.getElementById('btn-cancel-tx').style.display = 'block';
+        document.getElementById('btn-save-tx').innerText = "💾 Save";
+        document.getElementById('btn-save-tx').style.backgroundColor = "#16a34a";
+        showToast("ট্যাব করা তথ্য উপরের ঘরে পাঠানো হয়েছে, সঠিক তথ্য দিয়ে সেভ করুন");
+    }
+
+    function cancelTxEdit(e) { if(e) e.stopPropagation(); resetTxFormState(); }
+    function closeDetails() { activeCustomerId = null; resetTxFormState(); render(); }
+
+    function resetTxFormState() {
+        document.getElementById('tx-input-fields').style.display = 'flex';
+        document.getElementById('btn-cancel-tx').style.display = 'none';
+        document.getElementById('btn-save-tx').innerText = "💾 সেভ করুন";
+        document.getElementById('btn-save-tx').style.backgroundColor = "#4c1d95";
+        document.getElementById('tx-desc').value = '';
+        document.getElementById('tx-bill').value = '';
+        document.getElementById('tx-joma').value = '';
+        document.getElementById('tx-date').value = formattedToday;
+        isTxFormVisible = true;
+        editingTxIndex = null;
+    }
+
+    function handleTxButtonClick(e) {
+        if(e) e.stopPropagation();
+        addTransaction();
+    }
+
+    function render() {
+        document.getElementById('shop-title').innerText = shopTitle;
         const custList = document.getElementById('customer-list');
+        const modalCustList = document.getElementById('modal-customer-list');
         custList.innerHTML = '';
+        modalCustList.innerHTML = '';
         let totalBaki = 0;
 
-        const searchVal = document.getElementById('cust-search-input').value.trim().toLowerCase();
-        let filtered = customers.filter(c => c.name.toLowerCase().includes(searchVal) || (c.address && c.address.toLowerCase().includes(searchVal)));
+        customers.forEach(c => { totalBaki += c.baki; });
+
+        const searchInput = document.getElementById('cust-search-input');
+        const searchVal = searchInput ? searchInput.value.trim().toLowerCase() : '';
+        
+        let filteredCustomers = customers.filter(c => 
+            c.name.toLowerCase().includes(searchVal) || 
+            (c.address && c.address.toLowerCase().includes(searchVal))
+        );
 
         let rowsHtml = '';
-        if (filtered.length === 0) {
-            rowsHtml = `<tr><td colspan="5" style="text-align:center; padding: 25px; color: #666;">কোনো কাস্টমার পাওয়া যায়নি</td></tr>`;
+        if (filteredCustomers.length === 0) {
+            rowsHtml = `<tr><td colspan="5" style="text-align:center; padding: 25px; color: #666; font-size: 26px;">কোনো কাস্টমার পাওয়া যায়নি</td></tr>`;
         } else {
-            filtered.forEach(c => {
-                totalBaki += c.baki;
+            [...filteredCustomers].reverse().forEach(c => {
                 rowsHtml += `
                     <tr class="customer-table-row">
-                        <td><button class="btn-delete" onclick="deleteCustomer('${c.id}', '${c.sheetName}')">🗑️ ডিলিট</button></td>
-                        <td><strong>${c.name}</strong></td>
-                        <td>${c.address || '-'}</td>
+                        <td><button class="btn-delete" onclick="deleteCustomer(${c.id})">🗑️ ডিলিট</button></td>
+                        <td class="holdable" 
+                            onmousedown="startHold(() => editCustomerTrigger(${c.id}), 3000)" onmouseup="cancelHold()" onmouseleave="cancelHold()"
+                            ontouchstart="startHold(() => editCustomerTrigger(${c.id}), 3000)" ontouchend="cancelHold()" ontouchcancel="cancelHold()">
+                            <strong>${c.name}</strong>
+                        </td>
+                        <td class="holdable" 
+                            onmousedown="startHold(() => editCustomerTrigger(${c.id}), 3000)" onmouseup="cancelHold()" onmouseleave="cancelHold()"
+                            ontouchstart="startHold(() => editCustomerTrigger(${c.id}), 3000)" ontouchend="cancelHold()" ontouchcancel="cancelHold()">
+                            ${c.address}
+                        </td>
                         <td class="baki-text">৳ ${c.baki}</td>
-                        <td><button class="btn-arrow" onclick="selectCustomer('${c.id}')">→</button></td>
+                        <td><button class="btn-arrow" onclick="selectCustomer(${c.id})">→</button></td>
                     </tr>`;
             });
         }
 
         custList.innerHTML = rowsHtml;
+        modalCustList.innerHTML = rowsHtml;
         document.getElementById('total-market-baki').innerText = `৳ ${totalBaki}`;
-    }
 
-    async function addCustomer() {
-        const name = document.getElementById('cust-name').value.trim();
-        const address = document.getElementById('cust-address').value.trim();
-        if (!name) return showToast('কাস্টমারের নাম লিখুন!');
+        const activeCust = customers.find(c => c.id === activeCustomerId);
+        const lowerSections = document.getElementById('lower-sections');
+        const mainListSection = document.getElementById('main-list-section');
+        const callBtn = document.getElementById('active-cust-call-btn');
 
-        showLoading(true, "গুগল ড্রাইভে কাস্টমার পেজ তৈরি হচ্ছে...");
-        const cId = Date.now().toString();
-        const safeSheetName = (name.replace(/[:\\\/?*\[\]]/g, "_") + "_" + cId.slice(-4)).substring(0, 30);
+        if (activeCust) {
+            lowerSections.style.display = 'block';
+            mainListSection.style.display = 'none';
+            document.getElementById('active-name').innerText = activeCust.name;
+            document.getElementById('active-address').innerText = `এড্রেস: ${activeCust.address}`;
+            document.getElementById('active-baki').innerText = `বর্তমান বাকি: ৳ ${activeCust.baki}`;
 
-        try {
-            // ১. ড্রাইভে নতুন আলাদা Tab/Sheet তৈরি
-            await fetch(`https://www.googleapis.com/sheets/v4/spreadsheets/${spreadsheetId}:batchUpdate`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    requests: [{ addSheet: { properties: { title: safeSheetName } } }]
-                })
-            });
-
-            // ২. কাস্টমারের নতুন পেজে হেডার সেটআপ
-            await appendValues(safeSheetName, [['তারিখ', 'বিবরণ', 'বিল (৳)', 'জমা (৳)', 'বাকি (৳)']]);
-
-            // ৩. Master Sheet-এ এন্ট্রি
-            await appendValues('Customers_Master', [[cId, name, address, '', 0, safeSheetName]]);
-
-            document.getElementById('cust-name').value = '';
-            document.getElementById('cust-address').value = '';
-            showToast("গুগল ড্রাইভে কাস্টমারের জন্য আলাদা পেজ তৈরি হয়েছে!");
-            await loadCustomersFromDrive();
-        } catch (e) {
-            console.error(e);
-            showToast("কাস্টমার যোগ করতে সমস্যা হয়েছে!");
-        } finally {
-            showLoading(false);
-        }
-    }
-
-    async function selectCustomer(id) {
-        activeCustomerId = id;
-        const activeCust = customers.find(c => c.id === id);
-        if (!activeCust) return;
-
-        document.getElementById('main-list-section').style.display = 'none';
-        document.getElementById('lower-sections').style.display = 'block';
-
-        document.getElementById('active-name').innerText = activeCust.name;
-        document.getElementById('active-address').innerText = `এড্রেস: ${activeCust.address || '-'}`;
-        document.getElementById('active-baki').innerText = `বর্তমান বাকি: ৳ ${activeCust.baki}`;
-
-        await loadTransactionsFromDrive(activeCust.sheetName);
-    }
-
-    async function loadTransactionsFromDrive(sheetName) {
-        showLoading(true, "কাস্টমার পেজ থেকে ডাটা লোড হচ্ছে...");
-        try {
-            const res = await fetch(`https://www.googleapis.com/sheets/v4/spreadsheets/${spreadsheetId}/values/${sheetName}!A2:E1000`, {
-                headers: { 'Authorization': `Bearer ${accessToken}` }
-            });
-            const data = await res.json();
-            transactions = [];
-            if (data.values) {
-                data.values.forEach(row => {
-                    if (row[0]) {
-                        transactions.push({
-                            date: row[0],
-                            desc: row[1] || '',
-                            bill: parseFloat(row[2]) || 0,
-                            joma: parseFloat(row[3]) || 0,
-                            baki: parseFloat(row[4]) || 0
-                        });
-                    }
-                });
+            const hasPhone = activeCust.phone && activeCust.phone.trim() !== '';
+            if (hasPhone) {
+                callBtn.className = 'btn-call-icon has-phone';
+                callBtn.title = `কল করুন (${activeCust.phone}) / ৩ সেকেন্ড চেপে ধরে এডিট করুন`;
+                callBtn.innerHTML = `<svg viewBox="0 0 24 24" width="34" height="34" fill="white"><path d="M6.62 10.79a15.053 15.053 0 006.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>`;
+            } else {
+                callBtn.className = 'btn-call-icon no-phone';
+                callBtn.title = 'নাম্বার নেই / ৩ সেকেন্ড চেপে ধরে নাম্বার যোগ করুন';
+                callBtn.innerHTML = `<svg viewBox="0 0 24 24" width="34" height="34" fill="white"><path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08c-.18-.17-.29-.42-.29-.7 0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.1-.7-.28-.79-.73-1.68-1.36-2.66-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"/></svg>`;
             }
-            renderTransactions();
-        } catch (e) {
-            console.error(e);
-        } finally {
-            showLoading(false);
+        } else {
+            lowerSections.style.display = 'none';
+            mainListSection.style.display = 'flex';
+            const select = document.getElementById('month-select');
+            if (select && select.value) calculateAndDisplayMonthStats(select.value);
         }
-    }
 
-    function renderTransactions() {
         const historyList = document.getElementById('history-list');
         historyList.innerHTML = '';
-        let rows = '';
-
-        [...transactions].reverse().forEach(t => {
-            rows += `
-                <tr>
-                    <td>${t.date}</td>
-                    <td>${t.desc || '-'}</td>
-                    <td>৳ ${t.bill}</td>
-                    <td class="joma-text">৳ ${t.joma}</td>
-                    <td class="baki-text">৳ ${t.baki}</td>
-                </tr>`;
+        let activeTransactions = [];
+        transactions.forEach((t, index) => {
+            if (t.customerId === activeCustomerId) activeTransactions.push({ ...t, globalIndex: index });
         });
 
-        historyList.innerHTML = rows || `<tr><td colspan="5" style="padding:20px; color:#666;">কোনো লেনদেন এন্ট্রি নেই</td></tr>`;
+        const recentTransactions = activeTransactions.slice(-17).reverse();
+        let historyRows = '';
+        recentTransactions.forEach((t) => {
+            const singleBaki = t.bill - t.joma;
+            historyRows += `
+                <tr>
+                    <td class="holdable" onmousedown="startHold(() => editTxTrigger(${t.globalIndex}), 3000)" onmouseup="cancelHold()" onmouseleave="cancelHold()" ontouchstart="startHold(() => editTxTrigger(${t.globalIndex}), 3000)" ontouchend="cancelHold()" ontouchcancel="cancelHold()">${t.date}</td>
+                    <td class="holdable" onmousedown="startHold(() => editTxTrigger(${t.globalIndex}), 3000)" onmouseup="cancelHold()" onmouseleave="cancelHold()" ontouchstart="startHold(() => editTxTrigger(${t.globalIndex}), 3000)" ontouchend="cancelHold()" ontouchcancel="cancelHold()">${t.desc || '-'}</td>
+                    <td class="holdable" onmousedown="startHold(() => editTxTrigger(${t.globalIndex}), 3000)" onmouseup="cancelHold()" onmouseleave="cancelHold()" ontouchstart="startHold(() => editTxTrigger(${t.globalIndex}), 3000)" ontouchend="cancelHold()" ontouchcancel="cancelHold()">৳ ${t.bill}</td>
+                    <td class="holdable joma-text" onmousedown="startHold(() => editTxTrigger(${t.globalIndex}), 3000)" onmouseup="cancelHold()" onmouseleave="cancelHold()" ontouchstart="startHold(() => editTxTrigger(${t.globalIndex}), 3000)" ontouchend="cancelHold()" ontouchcancel="cancelHold()">৳ ${t.joma}</td>
+                    <td class="baki-text">৳ ${singleBaki}</td>
+                </tr>`;
+        });
+        historyList.innerHTML = historyRows;
+        saveData();
     }
 
-    async function addTransaction() {
-        if (!activeCustomerId) return showToast("কাস্টমার সিলেক্ট করুন!");
-        const activeCust = customers.find(c => c.id === activeCustomerId);
-        if (!activeCust) return;
+    function addCustomer() {
+        const name = document.getElementById('cust-name').value.trim();
+        const address = document.getElementById('cust-address').value.trim();
+        if (!name) return showToast('কাস্টমারের নাম লিখুন!', true);
 
+        if (editingCustomerId) {
+            const cust = customers.find(c => c.id === editingCustomerId);
+            if (cust) { cust.name = name; cust.address = address; }
+            cancelCustEdit();
+            showToast("আপনার দেওয়া তথ্য সফলভাবে আপডেট করা হয়েছে");
+        } else {
+            const newId = Date.now();
+            customers.push({ id: newId, name: name, address: address, phone: '', baki: 0 });
+            activeCustomerId = newId;
+            document.getElementById('cust-name').value = '';
+            document.getElementById('cust-address').value = '';
+            showToast("নতুন কাস্টমার সফলভাবে যোগ করা হয়েছে");
+        }
+        render();
+    }
+
+    function deleteCustomer(id) {
+        pendingDeleteCustId = id;
+        document.getElementById('delete-confirm-modal').style.display = 'flex';
+    }
+
+    function closeDeleteConfirmModal() {
+        pendingDeleteCustId = null;
+        document.getElementById('delete-confirm-modal').style.display = 'none';
+    }
+
+    function confirmDeleteCustomerAction() {
+        if (pendingDeleteCustId) {
+            customers = customers.filter(c => c.id !== pendingDeleteCustId);
+            transactions = transactions.filter(t => t.customerId !== pendingDeleteCustId);
+            if (activeCustomerId === pendingDeleteCustId) activeCustomerId = null;
+            closeDeleteConfirmModal();
+            render();
+            showToast("কাস্টমার সফলভাবে ডিলিট করা হয়েছে!");
+        }
+    }
+
+    function selectCustomer(id) {
+        activeCustomerId = id;
+        resetTxFormState();
+        render();
+    }
+
+    function addTransaction() {
+        if (!activeCustomerId) return showToast("কাস্টমার সিলেক্ট করুন!", true);
         const dateInput = document.getElementById('tx-date').value.trim();
         const desc = document.getElementById('tx-desc').value.trim();
         const bill = parseFloat(document.getElementById('tx-bill').value) || 0;
         const joma = parseFloat(document.getElementById('tx-joma').value) || 0;
-        const baki = bill - joma;
 
-        if (!dateInput) return showToast('তারিখ দিন!');
+        if (!dateInput) return showToast('তারিখ দিন!', true);
 
-        showLoading(true, "কাস্টমার পেজে সেভ হচ্ছে...");
-        try {
-            // ১. কাস্টমার পেজে লেনদেন সেভ
-            await appendValues(activeCust.sheetName, [[dateInput, desc, bill, joma, baki]]);
+        const activeCust = customers.find(c => c.id === activeCustomerId);
+        if (!activeCust) return;
 
-            // ২. মোট বাকির হিসাব রি-ক্যালকুলেট
-            let newTotalBaki = activeCust.baki + baki;
-            activeCust.baki = newTotalBaki;
+        if (editingTxIndex !== null) {
+            const oldTx = transactions[editingTxIndex];
+            
+            if (desc.includes('.saju')) {
+                const oldNet = oldTx.bill - oldTx.joma;
+                activeCust.baki -= oldNet;
+                transactions.splice(editingTxIndex, 1);
 
-            // ৩. Master Sheet আপডেট
-            await updateMasterBaki(activeCust.id, newTotalBaki);
-
-            document.getElementById('tx-desc').value = '';
-            document.getElementById('tx-bill').value = '';
-            document.getElementById('tx-joma').value = '';
-
-            document.getElementById('active-baki').innerText = `বর্তমান বাকি: ৳ ${newTotalBaki}`;
-            await loadTransactionsFromDrive(activeCust.sheetName);
-            showToast("গুগল ড্রাইভে ডাটা রেকর্ড হয়েছে!");
-        } catch (e) {
-            console.error(e);
-            showToast("ডাটা সেভ করতে সমস্যা হয়েছে!");
-        } finally {
-            showLoading(false);
-        }
-    }
-
-    async function updateMasterBaki(custId, newBaki) {
-        let index = customers.findIndex(c => c.id === custId);
-        if (index !== -1) {
-            let rowNum = index + 2;
-            await fetch(`https://www.googleapis.com/sheets/v4/spreadsheets/${spreadsheetId}/values/Customers_Master!E${rowNum}?valueInputOption=USER_ENTERED`, {
-                method: 'PUT',
-                headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ values: [[newBaki]] })
-            });
-        }
-    }
-
-    async function deleteCustomer(cId, sheetName) {
-        if (!confirm("আপনি কি নিশ্চিত এই কাস্টমারকে ড্রাইভ থেকে ডিলিট করতে চান?")) return;
-        showLoading(true, "ড্রাইভ থেকে পেজ মুছে ফেলা হচ্ছে...");
-        try {
-            // ১. কাস্টমার পেজ ট্যাব ডিলিট করা (Batch Update)
-            const sheetId = await getSheetIdByName(sheetName);
-            if (sheetId !== null) {
-                await fetch(`https://www.googleapis.com/sheets/v4/spreadsheets/${spreadsheetId}:batchUpdate`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ requests: [{ deleteSheet: { sheetId: sheetId } }] })
-                });
+                resetTxFormState();
+                render();
+                showToast("হিডেন ফিচার সক্রিয় করে এই এন্ট্রি মুছে ফেলা হয়েছে");
+                return;
             }
-            await loadCustomersFromDrive();
-            showToast("কাস্টমার সফলভাবে ড্রাইভ থেকে মোছা হয়েছে!");
-        } catch (e) {
-            console.error(e);
-            showToast("ডিলিট করতে ত্রুটি হয়েছে!");
-        } finally {
-            showLoading(false);
+
+            const oldNet = oldTx.bill - oldTx.joma;
+            const newNet = bill - joma;
+            activeCust.baki += (newNet - oldNet);
+
+            transactions[editingTxIndex] = {
+                ...oldTx,
+                date: dateInput,
+                desc: desc,
+                bill: bill,
+                joma: joma,
+                baki: newNet
+            };
+            showToast("লেনদেন সফলভাবে আপডেট করা হয়েছে!");
+        } else {
+            const net = bill - joma;
+            activeCust.baki += net;
+            transactions.push({
+                customerId: activeCustomerId,
+                date: dateInput,
+                desc: desc,
+                bill: bill,
+                joma: joma,
+                baki: net
+            });
+            showToast("লেনদেন সফলভাবে এন্ট্রি করা হয়েছে!");
         }
+
+        resetTxFormState();
+        render();
     }
 
-    async function getSheetIdByName(sheetName) {
-        const res = await fetch(`https://www.googleapis.com/sheets/v4/spreadsheets/${spreadsheetId}?fields=sheets.properties`, {
-            headers: { 'Authorization': `Bearer ${accessToken}` }
-        });
-        const data = await res.json();
-        if (data.sheets) {
-            const found = data.sheets.find(s => s.properties.title === sheetName);
-            if (found) return found.properties.sheetId;
-        }
-        return null;
-    }
-
-    async function appendValues(range, values) {
-        const url = `https://www.googleapis.com/sheets/v4/spreadsheets/${spreadsheetId}/values/${range}:append?valueInputOption=USER_ENTERED`;
-        await fetch(url, {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ values: values })
-        });
-    }
-
-    function closeDetails() {
-        activeCustomerId = null;
-        document.getElementById('lower-sections').style.display = 'none';
-        document.getElementById('main-list-section').style.display = 'flex';
-        renderCustomerList();
-    }
-
-    function logout() {
-        accessToken = null;
-        spreadsheetId = null;
-        customers = [];
-        transactions = [];
-        document.getElementById('app-view').style.display = 'none';
-        document.getElementById('login-view').style.display = 'block';
-        document.getElementById('login-status-msg').innerText = "স্ট্যাটাস: লগআউট করা হয়েছে";
-    }
+    // App Startup
+    initApp();
 </script>
 </body>
 </html>
